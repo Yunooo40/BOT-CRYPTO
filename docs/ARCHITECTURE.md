@@ -75,8 +75,8 @@ suivant. Chaque module est autonome.
 
 | #   | Module          | Livre                                                        |
 | --- | --------------- | ------------------------------------------------------------ |
-| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker _(en cours)_    |
-| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé       |
+| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅              |
+| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅    |
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover, load-balance |
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata      |
 | M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature        |
@@ -93,6 +93,15 @@ suivant. Chaque module est autonome.
 
 ## État actuel
 
-**M0 — Fondations.** Monorepo pnpm + Turborepo, TypeScript strict, trois packages
-socles (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de
-dev Docker (PostgreSQL + Redis). Les `apps/` (services) arrivent à partir de M1.
+**M0 — Fondations ✅** et **M1 — Domain & Events ✅** sont livrés.
+
+- **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
+  (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
+  Docker (PostgreSQL + Redis).
+- **M1** : `@bot/domain` (value objects & entités purs — `Address`, `TokenAmount`
+  en bigint, `Token`, `Pool`, `RiskScore`, `Trade`, `Position`) et `@bot/events`
+  (contrat d'événements Zod + bus `EventBus` avec `InMemoryEventBus` pour les
+  tests/paper trading et `RedisEventBus` sur Redis Streams, livraison at-least-once).
+
+Prochaine étape : **M2 — RPC Manager**. Les `apps/` (services) arrivent quand un
+service concret consomme ces briques.
