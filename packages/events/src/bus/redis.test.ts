@@ -6,6 +6,9 @@ import { createEvent } from "../catalog";
 import { RedisEventBus } from "./redis";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
+// When REDIS_URL is set explicitly (CI), the integration suite must run — an
+// unreachable Redis is a failure, not a silent skip.
+const REDIS_REQUIRED = process.env.REDIS_URL !== undefined;
 const TOKEN = toAddress("0x4200000000000000000000000000000000000006");
 
 /** Probe Redis once; the whole suite is skipped when it's unreachable (e.g. no Docker locally). */
@@ -38,6 +41,12 @@ async function waitFor(condition: () => boolean, timeoutMs: number): Promise<voi
 }
 
 const available = await redisReachable();
+
+// Guard: in CI (REDIS_URL set) this asserts the suite below actually ran instead
+// of being skipped, so a green pipeline genuinely proves the Redis bus works.
+it.runIf(REDIS_REQUIRED)("Redis is reachable when REDIS_URL is configured (CI guard)", () => {
+  expect(available).toBe(true);
+});
 
 describe.skipIf(!available)("RedisEventBus (integration)", () => {
   const prefix = `test:${randomUUID()}:`;
