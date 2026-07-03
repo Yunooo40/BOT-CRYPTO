@@ -78,7 +78,7 @@ suivant. Chaque module est autonome.
 | M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅             |
 | M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅   |
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅           |
-| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata     |
+| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅  |
 | M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature       |
 | M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité    |
 | M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
@@ -93,8 +93,8 @@ suivant. Chaque module est autonome.
 
 ## État actuel
 
-**M0 — Fondations ✅**, **M1 — Domain & Events ✅** et **M2 — RPC Manager ✅**
-sont livrés.
+**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅** et
+**M3 — DEX Adapters ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -110,6 +110,16 @@ sont livrés.
   quand tout est down. Config `BASE_RPC_URLS` (`url[|poids][|wsUrl]`, séparés
   par des virgules) validée par `@bot/config`. Les erreurs applicatives
   JSON-RPC (revert…) remontent telles quelles, sans failover.
+- **M3** : `@bot/dex-adapters` — port `DexAdapter` (résolution de pool, état,
+  `quoteExactIn`, `buildSwapCalldata` pur) et trois adapters : Uniswap V2 (math
+  x·y=k locale + impact prix), Uniswap V3 (QuoterV2, deadline via `multicall`
+  du SwapRouter02), Aerodrome (routes stable/volatile via le router, fees
+  par pool). Adresses canoniques Base surchargeables, `createDexAdapters()`
+  pour itérer sur les venues, `PoolNotFoundError` (DomainError). Single-hop,
+  lecture seule — la signature/envoi arrive en M4/M7 ; les taxes de tokens
+  fee-on-transfer ne sont pas modélisées dans la quote (Shield, M6).
+  Tests d'intégration opt-in contre un fork anvil ou RPC Base live
+  (`BASE_FORK_RPC_URL`), skippés sinon.
 
-Prochaine étape : **M3 — DEX Adapters**. Les `apps/` (services) arrivent quand un
-service concret consomme ces briques.
+Prochaine étape : **M4 — Wallet Service**. Les `apps/` (services) arrivent quand
+un service concret consomme ces briques.

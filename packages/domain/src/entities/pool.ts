@@ -15,6 +15,8 @@ export const poolSchema = z.object({
   token1: addressSchema,
   /** Fee tier in hundredths of a bip (Uniswap V3 style); absent for V2-style pools. */
   feeTier: z.number().int().nonnegative().optional(),
+  /** Aerodrome only: stable (x³y+xy³) vs volatile (xy=k) pool. Absent elsewhere. */
+  stable: z.boolean().optional(),
 });
 
 export type Pool = z.infer<typeof poolSchema>;
