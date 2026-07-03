@@ -34,9 +34,13 @@ export abstract class BaseError extends Error {
 /**
  * A business rule was violated (e.g. token risk score above the snipe threshold).
  * Expected, not a bug — do not retry, surface it to the user/strategy.
+ *
+ * `code` is annotated `string` (not its literal) on the three base classes so a
+ * package can subclass with a more specific code — e.g. `RpcInfraError` with
+ * `"RPC_UNAVAILABLE"` — while `instanceof` classification keeps working.
  */
 export class DomainError extends BaseError {
-  readonly code = "DOMAIN_ERROR";
+  readonly code: string = "DOMAIN_ERROR";
 }
 
 /**
@@ -44,7 +48,7 @@ export class DomainError extends BaseError {
  * Usually transient and safe to retry with backoff.
  */
 export class InfraError extends BaseError {
-  readonly code = "INFRA_ERROR";
+  readonly code: string = "INFRA_ERROR";
 }
 
 /**
@@ -52,7 +56,7 @@ export class InfraError extends BaseError {
  * Deterministic — retrying the same input will fail again.
  */
 export class ValidationError extends BaseError {
-  readonly code = "VALIDATION_ERROR";
+  readonly code: string = "VALIDATION_ERROR";
 }
 
 /** Type guard: true for any error in this hierarchy. */

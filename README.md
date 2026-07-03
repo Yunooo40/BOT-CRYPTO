@@ -3,7 +3,7 @@
 Plateforme de trading de memecoins EVM (chaîne de lancement : **Base**), full
 TypeScript, pensée comme un produit professionnel modulaire et maintenable.
 
-> 🚧 En construction, module par module. État actuel : **M0 — Fondations**.
+> 🚧 En construction, module par module. État actuel : **M3 — DEX Adapters** livré.
 
 ## Fonctionnalités visées
 
@@ -30,13 +30,17 @@ pnpm check              # typecheck + lint + test + build
 
 Monorepo pnpm + Turborepo.
 
-| Chemin            | Rôle                                                   |
-| ----------------- | ------------------------------------------------------ |
-| `packages/config` | `@bot/config` — env typé et validé (fail-fast au boot) |
-| `packages/logger` | `@bot/logger` — logs structurés, secrets redactés      |
-| `packages/errors` | `@bot/errors` — hiérarchie d'erreurs classifiables     |
-| `apps/`           | services déployables (à partir de M1)                  |
-| `docs/`           | architecture et décisions                              |
+| Chemin                  | Rôle                                                              |
+| ----------------------- | ----------------------------------------------------------------- |
+| `packages/config`       | `@bot/config` — env typé et validé (fail-fast au boot)            |
+| `packages/logger`       | `@bot/logger` — logs structurés, secrets redactés                 |
+| `packages/errors`       | `@bot/errors` — hiérarchie d'erreurs classifiables                |
+| `packages/domain`       | `@bot/domain` — value objects et entités du domaine               |
+| `packages/events`       | `@bot/events` — contrat d'événements + bus Redis typé             |
+| `packages/rpc-manager`  | `@bot/rpc-manager` — pool RPC : failover, health checks           |
+| `packages/dex-adapters` | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata |
+| `apps/`                 | services déployables (quand un service consomme ces briques)      |
+| `docs/`                 | architecture et décisions                                         |
 
 ## Licence
 
