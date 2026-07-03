@@ -7,13 +7,19 @@ import { z } from "zod";
  * discover a missing DATABASE_URL three seconds into a live trade.
  *
  * As modules land they extend this schema (RPC URLs, encryption keys, chain
- * config, notification tokens, ...). For M0 it covers only the shared infra.
+ * config, notification tokens, ...).
  */
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
+  /**
+   * Base RPC endpoints (M2): comma-separated `url[|weight][|wsUrl]` entries,
+   * e.g. `https://mainnet.base.org,https://base.example.com|3|wss://base.example.com`.
+   * Only presence is checked here; `@bot/rpc-manager` validates each entry.
+   */
+  BASE_RPC_URLS: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

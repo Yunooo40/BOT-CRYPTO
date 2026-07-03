@@ -73,27 +73,28 @@ par events uniquement.
 Développement strictement séquentiel, un module à la fois, chacun validé avant le
 suivant. Chaque module est autonome.
 
-| #   | Module          | Livre                                                        |
-| --- | --------------- | ------------------------------------------------------------ |
-| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅              |
-| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅    |
-| M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover, load-balance |
-| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata      |
-| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature        |
-| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité     |
-| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                      |
-| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading        |
-| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                            |
-| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes                |
-| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)            |
-| M11 | Notifications   | Telegram, Discord, webhook, email                            |
-| M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting  |
-| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics         |
-| M14 | Observabilité   | Métriques, traces, audit trail, alerting                     |
+| #   | Module          | Livre                                                       |
+| --- | --------------- | ----------------------------------------------------------- |
+| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅             |
+| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅   |
+| M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅           |
+| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata     |
+| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature       |
+| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité    |
+| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
+| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
+| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                           |
+| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes               |
+| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)           |
+| M11 | Notifications   | Telegram, Discord, webhook, email                           |
+| M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting |
+| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics        |
+| M14 | Observabilité   | Métriques, traces, audit trail, alerting                    |
 
 ## État actuel
 
-**M0 — Fondations ✅** et **M1 — Domain & Events ✅** sont livrés.
+**M0 — Fondations ✅**, **M1 — Domain & Events ✅** et **M2 — RPC Manager ✅**
+sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -102,6 +103,13 @@ suivant. Chaque module est autonome.
   en bigint, `Token`, `Pool`, `RiskScore`, `Trade`, `Position`) et `@bot/events`
   (contrat d'événements Zod + bus `EventBus` avec `InMemoryEventBus` pour les
   tests/paper trading et `RedisEventBus` sur Redis Streams, livraison at-least-once).
+- **M2** : `@bot/rpc-manager` — pool d'endpoints RPC derrière un `PublicClient`
+  viem virtuel : load-balance pondéré (smooth weighted round-robin), failover
+  transparent sur erreur d'infrastructure, circuit breaker par endpoint avec
+  cool-down exponentiel, health checks périodiques, `RpcInfraError` retryable
+  quand tout est down. Config `BASE_RPC_URLS` (`url[|poids][|wsUrl]`, séparés
+  par des virgules) validée par `@bot/config`. Les erreurs applicatives
+  JSON-RPC (revert…) remontent telles quelles, sans failover.
 
-Prochaine étape : **M2 — RPC Manager**. Les `apps/` (services) arrivent quand un
+Prochaine étape : **M3 — DEX Adapters**. Les `apps/` (services) arrivent quand un
 service concret consomme ces briques.

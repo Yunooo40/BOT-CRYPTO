@@ -5,6 +5,7 @@ import { loadEnv } from "./env";
 const validEnv = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/bot",
   REDIS_URL: "redis://localhost:6379",
+  BASE_RPC_URLS: "https://mainnet.base.org",
 } satisfies NodeJS.ProcessEnv;
 
 describe("loadEnv", () => {
@@ -25,6 +26,7 @@ describe("loadEnv", () => {
   it("throws a ValidationError naming a missing required variable", () => {
     expect(() => loadEnv({})).toThrow(ValidationError);
     expect(() => loadEnv({})).toThrow(/DATABASE_URL/);
+    expect(() => loadEnv({})).toThrow(/BASE_RPC_URLS/);
   });
 
   it("rejects an out-of-range enum value", () => {
