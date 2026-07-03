@@ -79,7 +79,7 @@ suivant. Chaque module est autonome.
 | M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅   |
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅           |
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅  |
-| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature       |
+| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅    |
 | M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité    |
 | M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
 | M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
@@ -93,8 +93,8 @@ suivant. Chaque module est autonome.
 
 ## État actuel
 
-**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅** et
-**M3 — DEX Adapters ✅** sont livrés.
+**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
+**M3 — DEX Adapters ✅** et **M4 — Wallet Service (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -120,6 +120,13 @@ suivant. Chaque module est autonome.
   fee-on-transfer ne sont pas modélisées dans la quote (Shield, M6).
   Tests d'intégration opt-in contre un fork anvil ou RPC Base live
   (`BASE_FORK_RPC_URL`), skippés sinon.
+- **M4** : `@bot/wallet-core` — génération/import de wallets, clés privées
+  chiffrées AES-256-GCM (scrypt N=2¹⁵ + salt par enveloppe, AAD = adresse,
+  format versionné `v1:`), signature tx/message/typed-data avec clé claire
+  limitée à la durée de l'appel (buffer zeroizé). `WalletRepository` en
+  in-memory (tests/paper) et Drizzle/PostgreSQL (table `wallets`,
+  multi-tenant-ready). `WALLET_MASTER_KEY` ajoutée au contrat d'env. L'app
+  NestJS wallet-service (port réseau de signature) arrivera avec M7.
 
-Prochaine étape : **M4 — Wallet Service**. Les `apps/` (services) arrivent quand
+Prochaine étape : **M5 — Scanner**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.

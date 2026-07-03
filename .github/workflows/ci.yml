@@ -9,8 +9,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
 
-    # Real Redis so the event-bus integration tests run for real (they skip when
-    # Redis is unreachable, e.g. local dev without Docker).
+    # Real Redis and Postgres so the event-bus and wallet-repository integration
+    # tests run for real (they skip when unreachable, e.g. local dev without Docker).
     services:
       redis:
         image: redis:7-alpine
@@ -21,9 +21,23 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: botcrypto
+          POSTGRES_PASSWORD: botcrypto
+          POSTGRES_DB: botcrypto
+        options: >-
+          --health-cmd "pg_isready -U botcrypto"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       REDIS_URL: redis://localhost:6379
+      DATABASE_URL: postgresql://botcrypto:botcrypto@localhost:5432/botcrypto
 
     steps:
       - uses: actions/checkout@v4

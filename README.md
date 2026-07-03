@@ -3,7 +3,7 @@
 Plateforme de trading de memecoins EVM (chaîne de lancement : **Base**), full
 TypeScript, pensée comme un produit professionnel modulaire et maintenable.
 
-> 🚧 En construction, module par module. État actuel : **M3 — DEX Adapters** livré.
+> 🚧 En construction, module par module. État actuel : **M4 — Wallet Service (cœur)** livré.
 
 ## Fonctionnalités visées
 
@@ -39,6 +39,7 @@ Monorepo pnpm + Turborepo.
 | `packages/events`       | `@bot/events` — contrat d'événements + bus Redis typé             |
 | `packages/rpc-manager`  | `@bot/rpc-manager` — pool RPC : failover, health checks           |
 | `packages/dex-adapters` | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata |
+| `packages/wallet-core`  | `@bot/wallet-core` — wallets chiffrés AES-256-GCM, signature      |
 | `apps/`                 | services déployables (quand un service consomme ces briques)      |
 | `docs/`                 | architecture et décisions                                         |
 

@@ -6,6 +6,7 @@ const validEnv = {
   DATABASE_URL: "postgresql://user:pass@localhost:5432/bot",
   REDIS_URL: "redis://localhost:6379",
   BASE_RPC_URLS: "https://mainnet.base.org",
+  WALLET_MASTER_KEY: "test-master-key-with-enough-length",
 } satisfies NodeJS.ProcessEnv;
 
 describe("loadEnv", () => {

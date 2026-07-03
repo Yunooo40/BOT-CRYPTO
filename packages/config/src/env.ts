@@ -20,6 +20,11 @@ export const envSchema = z.object({
    * Only presence is checked here; `@bot/rpc-manager` validates each entry.
    */
   BASE_RPC_URLS: z.string().min(1),
+  /**
+   * Wallet master passphrase (M4): the AES-256-GCM key-encryption key is
+   * derived from it (scrypt, per-record salt). Never logged, never stored.
+   */
+  WALLET_MASTER_KEY: z.string().min(16, "must be at least 16 characters"),
 });
 
 export type Env = z.infer<typeof envSchema>;
