@@ -81,7 +81,7 @@ suivant. Chaque module est autonome.
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅  |
 | M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅    |
 | M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅ |
-| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
+| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                  |
 | M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                           |
 | M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes               |
@@ -94,8 +94,8 @@ suivant. Chaque module est autonome.
 ## État actuel
 
 **M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
-**M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅** et
-**M5 — Scanner (cœur) ✅** sont livrés.
+**M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅**,
+**M5 — Scanner (cœur) ✅** et **M6 — Rugpull Shield (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -138,5 +138,15 @@ suivant. Chaque module est autonome.
   (catalogue M1). État en in-memory ou Drizzle/PostgreSQL (`scan_cursors`,
   `seen_pools`).
 
-Prochaine étape : **M6 — Rugpull Shield**. Les `apps/` (services) arrivent quand
+- **M6** : `@bot/shield-core` — port `Detector` (isolé, sous timeout, échec →
+  facteur « indéterminé », jamais de faux `safe`) et 11 détecteurs (liquidité,
+  sécurité LP, ownership, mint, pause/blacklist, proxy EIP-1967, limites,
+  taxes, honeypot-sell, concentration de supply, forme du token). `ShieldAnalyzer`
+  à deux vitesses : `assessQuick` (détecteurs `fast`, timeout serré, caché par
+  token) et `assess` (les 11). Agrégation pondérée → `RiskScore` expliqué
+  (score/verdict/facteurs, M1), seuils configurables. `attachShield` branche
+  `token.detected` → `risk.assessed` (corrélé). Heuristiques par sélecteurs
+  assumées faillibles — score de risque, pas garantie.
+
+Prochaine étape : **M7 — Trading Engine**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.
