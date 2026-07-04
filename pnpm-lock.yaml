@@ -285,6 +285,43 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)
 
+  packages/strategies-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
   packages/wallet-core:
     dependencies:
       '@bot/domain':
