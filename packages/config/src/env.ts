@@ -25,6 +25,17 @@ export const envSchema = z.object({
    * derived from it (scrypt, per-record salt). Never logged, never stored.
    */
   WALLET_MASTER_KEY: z.string().min(16, "must be at least 16 characters"),
+  /**
+   * AI provider keys (M10). All optional — the AI Service is a capability, not
+   * a boot prerequisite; a provider without its key is simply unavailable.
+   * Never logged (the logger redacts; don't pass them where they'd be printed).
+   */
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  GEMINI_API_KEY: z.string().min(1).optional(),
+  GROK_API_KEY: z.string().min(1).optional(),
+  /** Default AI provider when a request doesn't pin one. */
+  AI_DEFAULT_PROVIDER: z.enum(["anthropic", "openai", "gemini", "grok"]).default("anthropic"),
 });
 
 export type Env = z.infer<typeof envSchema>;

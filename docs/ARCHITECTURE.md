@@ -85,7 +85,7 @@ suivant. Chaque module est autonome.
 | M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅    |
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                        |
 | M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes ✅            |
-| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)           |
+| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅        |
 | M11 | Notifications   | Telegram, Discord, webhook, email                           |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting |
 | M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics        |
@@ -97,7 +97,7 @@ suivant. Chaque module est autonome.
 **M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅**,
 **M5 — Scanner (cœur) ✅**, **M6 — Rugpull Shield (cœur) ✅**,
 **M7 — Trading Engine (cœur) ✅**, **M8 — Strategies (cœur) ✅** et
-**M9 — Copy Trading (cœur) ✅** sont livrés.
+**M9 — Copy Trading (cœur) ✅** et **M10 — AI Service (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -184,5 +184,18 @@ suivant. Chaque module est autonome.
   (`tracked_wallets`, `copy_cursors`, `copied_swaps`, sizing en JSONB
   bigint-safe), cap de 50 wallets appliqué à l'upsert.
 
-Prochaine étape : **M10 — AI Service**. Les `apps/` (services) arrivent quand
+- **M10** : `@bot/ai-core` — moteur d'inférence LLM multi-provider derrière un
+  port unique `AiProvider`. Providers `AnthropicProvider` (référence : `POST
+  /v1/messages`, `anthropic-version`, `claude-opus-4-8`, sans `temperature` que
+  l'Opus 4.x rejette), `OpenAiProvider`/`GrokProvider` (API `/chat/completions`
+  partagée) et `GeminiProvider` (`generateContent`), tous en `fetch` natif +
+  timeout, erreurs normalisées (`AiInfraError` retryable / `AiValidationError`
+  terminale). `AiEngine` : retry borné des erreurs infra, fallback provider
+  optionnel, et `completeJson<T>()` (parse + validation Zod, tolère les fences).
+  `ProviderRegistry` construit les providers dont la clé est présente (l'IA est
+  une capacité, pas un prérequis de boot) et route une `ModelRef`. Clés d'API
+  optionnelles ajoutées au contrat `@bot/config`. Testé sur un `FakeProvider`
+  déterministe et des transports `fetch` mockés — aucun appel réseau en CI.
+
+Prochaine étape : **M11 — Notifications**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.
