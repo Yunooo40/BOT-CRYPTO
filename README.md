@@ -3,7 +3,7 @@
 Plateforme de trading de memecoins EVM (chaîne de lancement : **Base**), full
 TypeScript, pensée comme un produit professionnel modulaire et maintenable.
 
-> 🚧 En construction, module par module. État actuel : **M6 — Rugpull Shield (cœur)** livré.
+> 🚧 En construction, module par module. État actuel : **M7 — Trading Engine (cœur)** livré.
 
 ## Fonctionnalités visées
 
@@ -42,6 +42,7 @@ Monorepo pnpm + Turborepo.
 | `packages/wallet-core`  | `@bot/wallet-core` — wallets chiffrés AES-256-GCM, signature         |
 | `packages/scanner-core` | `@bot/scanner-core` — détection temps réel des nouveaux pools        |
 | `packages/shield-core`  | `@bot/shield-core` — Rugpull Shield : 11 détecteurs, score de risque |
+| `packages/engine-core`  | `@bot/engine-core` — exécution : paper/live, retry, positions        |
 | `apps/`                 | services déployables (quand un service consomme ces briques)         |
 | `docs/`                 | architecture et décisions                                            |
 

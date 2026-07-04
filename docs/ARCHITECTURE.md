@@ -82,7 +82,7 @@ suivant. Chaque module est autonome.
 | M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅    |
 | M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅ |
 | M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                  |
-| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
+| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅    |
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                           |
 | M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes               |
 | M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)           |
@@ -95,7 +95,8 @@ suivant. Chaque module est autonome.
 
 **M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
 **M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅**,
-**M5 — Scanner (cœur) ✅** et **M6 — Rugpull Shield (cœur) ✅** sont livrés.
+**M5 — Scanner (cœur) ✅**, **M6 — Rugpull Shield (cœur) ✅** et
+**M7 — Trading Engine (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -148,5 +149,15 @@ suivant. Chaque module est autonome.
   `token.detected` → `risk.assessed` (corrélé). Heuristiques par sélecteurs
   assumées faillibles — score de risque, pas garantie.
 
-Prochaine étape : **M7 — Trading Engine**. Les `apps/` (services) arrivent quand
+- **M7** : `@bot/engine-core` — port `Executor` (le hot path derrière une
+  interface) avec `PaperExecutor` (quote réelle, aucune transaction, paper
+  trading natif) et `LiveExecutor` (quote → calldata M3 → approve → signature
+  via port `Signer`/M4 → reçu). `TradingEngine` : retry des `InfraError`
+  (backoff borné), erreurs domaine terminales, idempotence par `intentId`,
+  gate pré-trade Shield optionnel (hook, non couplé). Positions & PnL réalisé
+  (`applyTrade`, book paper/live séparés), in-memory ou Drizzle/PostgreSQL
+  (`positions`). `attachEngine` : `buy/sell.requested` → `trade.executed` /
+  `trade.failed` corrélés.
+
+Prochaine étape : **M8 — Strategies**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.
