@@ -80,7 +80,7 @@ suivant. Chaque module est autonome.
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅           |
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅  |
 | M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅    |
-| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité    |
+| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅ |
 | M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
 | M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                           |
@@ -94,7 +94,8 @@ suivant. Chaque module est autonome.
 ## État actuel
 
 **M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
-**M3 — DEX Adapters ✅** et **M4 — Wallet Service (cœur) ✅** sont livrés.
+**M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅** et
+**M5 — Scanner (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -128,5 +129,14 @@ suivant. Chaque module est autonome.
   multi-tenant-ready). `WALLET_MASTER_KEY` ajoutée au contrat d'env. L'app
   NestJS wallet-service (port réseau de signature) arrivera avec M7.
 
-Prochaine étape : **M5 — Scanner**. Les `apps/` (services) arrivent quand
+- **M5** : `@bot/scanner-core` — un watcher par venue (polling `eth_getLogs`
+  des factories par plages bornées, via le client failover de M2), curseur de
+  blocs persistant par venue (reprise sans trou), déduplication des pools,
+  enrichissement défensif des métadonnées token (repli bytes32/valeurs par
+  défaut), filtre token de référence (WETH) + liquidité minimale optionnelle,
+  backoff sur erreur RPC. Publie `pool.created` + `token.detected` corrélés
+  (catalogue M1). État en in-memory ou Drizzle/PostgreSQL (`scan_cursors`,
+  `seen_pools`).
+
+Prochaine étape : **M6 — Rugpull Shield**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.
