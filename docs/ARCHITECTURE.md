@@ -84,7 +84,7 @@ suivant. Chaque module est autonome.
 | M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                  |
 | M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅    |
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                        |
-| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes               |
+| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes ✅            |
 | M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)           |
 | M11 | Notifications   | Telegram, Discord, webhook, email                           |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting |
@@ -96,7 +96,8 @@ suivant. Chaque module est autonome.
 **M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
 **M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅**,
 **M5 — Scanner (cœur) ✅**, **M6 — Rugpull Shield (cœur) ✅**,
-**M7 — Trading Engine (cœur) ✅** et **M8 — Strategies (cœur) ✅** sont livrés.
+**M7 — Trading Engine (cœur) ✅**, **M8 — Strategies (cœur) ✅** et
+**M9 — Copy Trading (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -168,5 +169,20 @@ suivant. Chaque module est autonome.
   in-memory ou Drizzle/PostgreSQL (`strategies`, params/state en JSONB
   bigint-safe).
 
-Prochaine étape : **M9 — Copy Trading**. Les `apps/` (services) arrivent quand
+- **M9** : `@bot/copy-core` — suivi de wallets « leaders » (≤ 50). Le
+  `WalletWatcher` lit les logs `Transfer` d'un leader par plages bornées (client
+  failover M2), curseur de blocs persistant par wallet (reprise sans trou,
+  démarrage à la tête), et reconstruit ses swaps de façon défensive et
+  agnostique de la vénue : reference-token sortant + token entrant = achat,
+  l'inverse = vente ; tout le reste (token-à-token, jambe de référence absente,
+  ambigu) est ignoré plutôt que deviné. `defaultCopyPolicy` pure/déterministe :
+  dimensionnement `percent`/`fixed`, planchers/plafonds, listes allow/deny,
+  ventes miroir sur notre propre position, chaque non-emit motivé. Le
+  `CopyRunner` publie `buy/sell.requested` (`source: "copy"`, corrélé au tx du
+  leader), avec gate Shield optionnel (hook non couplé) et idempotence stricte
+  par `(walletId, txHash, logIndex)`. Store in-memory ou Drizzle/PostgreSQL
+  (`tracked_wallets`, `copy_cursors`, `copied_swaps`, sizing en JSONB
+  bigint-safe), cap de 50 wallets appliqué à l'upsert.
+
+Prochaine étape : **M10 — AI Service**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.
