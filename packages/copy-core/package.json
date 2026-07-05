@@ -1,0 +1,50 @@
+{
+  "name": "@bot/copy-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "drizzle"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@bot/dex-adapters": "workspace:*",
+    "@bot/domain": "workspace:*",
+    "@bot/errors": "workspace:*",
+    "@bot/events": "workspace:*",
+    "@bot/logger": "workspace:*",
+    "drizzle-orm": "^0.38.3",
+    "postgres": "^3.4.5",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "format": [
+      "esm"
+    ],
+    "dts": true,
+    "clean": true,
+    "sourcemap": true
+  }
+}
