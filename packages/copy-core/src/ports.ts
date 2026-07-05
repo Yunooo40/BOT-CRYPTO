@@ -18,9 +18,7 @@ export interface PositionSource {
  * What the policy asks the runner to do for one observed swap. Pure data — the
  * policy never touches the bus, the chain, or a key.
  */
-export type CopyAction =
-  | { kind: "emit"; intent: TradeIntent }
-  | { kind: "skip"; reason: string };
+export type CopyAction = { kind: "emit"; intent: TradeIntent } | { kind: "skip"; reason: string };
 
 /** Everything the policy needs to decide, gathered by the runner before evaluate. */
 export interface CopyContext {

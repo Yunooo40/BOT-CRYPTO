@@ -37,4 +37,14 @@ describe("loadEnv", () => {
   it("rejects a malformed URL", () => {
     expect(() => loadEnv({ ...validEnv, DATABASE_URL: "not-a-url" })).toThrow(ValidationError);
   });
+
+  it("treats notification channels as optional but validates their shape", () => {
+    // Absent by default — a channel without config is simply inactive.
+    expect(loadEnv(validEnv).TELEGRAM_BOT_TOKEN).toBeUndefined();
+    const env = loadEnv({ ...validEnv, DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/x" });
+    expect(env.DISCORD_WEBHOOK_URL).toBe("https://discord.com/api/webhooks/x");
+    expect(() => loadEnv({ ...validEnv, DISCORD_WEBHOOK_URL: "not-a-url" })).toThrow(
+      ValidationError,
+    );
+  });
 });

@@ -86,7 +86,7 @@ suivant. Chaque module est autonome.
 | M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                        |
 | M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes ✅            |
 | M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅        |
-| M11 | Notifications   | Telegram, Discord, webhook, email                           |
+| M11 | Notifications   | Telegram, Discord, webhook, email ✅                        |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting |
 | M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics        |
 | M14 | Observabilité   | Métriques, traces, audit trail, alerting                    |
@@ -96,8 +96,9 @@ suivant. Chaque module est autonome.
 **M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
 **M3 — DEX Adapters ✅**, **M4 — Wallet Service (cœur) ✅**,
 **M5 — Scanner (cœur) ✅**, **M6 — Rugpull Shield (cœur) ✅**,
-**M7 — Trading Engine (cœur) ✅**, **M8 — Strategies (cœur) ✅** et
-**M9 — Copy Trading (cœur) ✅** et **M10 — AI Service (cœur) ✅** sont livrés.
+**M7 — Trading Engine (cœur) ✅**, **M8 — Strategies (cœur) ✅**,
+**M9 — Copy Trading (cœur) ✅**, **M10 — AI Service (cœur) ✅** et
+**M11 — Notifications (cœur) ✅** sont livrés.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -186,7 +187,7 @@ suivant. Chaque module est autonome.
 
 - **M10** : `@bot/ai-core` — moteur d'inférence LLM multi-provider derrière un
   port unique `AiProvider`. Providers `AnthropicProvider` (référence : `POST
-  /v1/messages`, `anthropic-version`, `claude-opus-4-8`, sans `temperature` que
+/v1/messages`, `anthropic-version`, `claude-opus-4-8`, sans `temperature` que
   l'Opus 4.x rejette), `OpenAiProvider`/`GrokProvider` (API `/chat/completions`
   partagée) et `GeminiProvider` (`generateContent`), tous en `fetch` natif +
   timeout, erreurs normalisées (`AiInfraError` retryable / `AiValidationError`
@@ -197,5 +198,14 @@ suivant. Chaque module est autonome.
   optionnelles ajoutées au contrat `@bot/config`. Testé sur un `FakeProvider`
   déterministe et des transports `fetch` mockés — aucun appel réseau en CI.
 
-Prochaine étape : **M11 — Notifications**. Les `apps/` (services) arrivent quand
+- **M11** : `@bot/notify-core` — quatre notifiers (Telegram HTML, Discord
+  embed, webhook JSON signé HMAC, email via port `EmailTransport`) derrière un
+  port `Notifier`, `HttpClient` injecté (défaut `fetch`). `formatEvent` mappe
+  les événements en messages (trade.executed → succès, trade.failed →
+  warning/critical, risk danger → critical). `NotificationDispatcher` : routage
+  par sévérité, dédup (TTL), rate-limit par canal (token bucket), retry des
+  `InfraError`. `attachNotifications` branche le bus. Canaux configurés par
+  variables optionnelles dans `@bot/config`.
+
+Prochaine étape : **M12 — API Gateway**. Les `apps/` (services) arrivent quand
 un service concret consomme ces briques.

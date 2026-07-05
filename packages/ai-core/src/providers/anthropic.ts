@@ -82,7 +82,7 @@ export class AnthropicProvider implements AiProvider {
 
     return {
       text,
-      model: json.model ?? (request.model ?? this.defaultModel),
+      model: json.model ?? request.model ?? this.defaultModel,
       stopReason: json.stop_reason ?? "unknown",
       usage: {
         inputTokens: json.usage?.input_tokens ?? 0,

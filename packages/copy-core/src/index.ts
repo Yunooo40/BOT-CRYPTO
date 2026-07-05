@@ -1,9 +1,4 @@
-export {
-  MAX_TRACKED_WALLETS,
-  type CopyMode,
-  type ObservedSwap,
-  type TrackedWallet,
-} from "./rules";
+export { MAX_TRACKED_WALLETS, type CopyMode, type ObservedSwap, type TrackedWallet } from "./rules";
 export type {
   CopyAction,
   CopyContext,

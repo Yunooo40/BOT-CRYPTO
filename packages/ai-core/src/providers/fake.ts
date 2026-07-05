@@ -2,10 +2,7 @@ import type { AiProvider } from "../ports";
 import type { AiRequest, AiResponse, ProviderName } from "../types";
 
 /** A scripted reply, or a function that computes one from the request. */
-export type FakeReply =
-  | string
-  | Error
-  | ((request: AiRequest) => AiResponse | string | Error);
+export type FakeReply = string | Error | ((request: AiRequest) => AiResponse | string | Error);
 
 export interface FakeProviderOptions {
   name?: ProviderName;

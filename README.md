@@ -44,6 +44,9 @@ Monorepo pnpm + Turborepo.
 | `packages/shield-core`     | `@bot/shield-core` — Rugpull Shield : 11 détecteurs, score de risque |
 | `packages/engine-core`     | `@bot/engine-core` — exécution : paper/live, retry, positions        |
 | `packages/strategies-core` | `@bot/strategies-core` — limit, TP, SL, trailing, DCA                |
+| `packages/copy-core`       | `@bot/copy-core` — copy trading : suivi de wallets, copie %          |
+| `packages/ai-core`         | `@bot/ai-core` — moteur IA multi-provider                            |
+| `packages/notify-core`     | `@bot/notify-core` — Telegram, Discord, webhook, email               |
 | `apps/`                    | services déployables (quand un service consomme ces briques)         |
 | `docs/`                    | architecture et décisions                                            |
 

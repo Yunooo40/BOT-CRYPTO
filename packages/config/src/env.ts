@@ -36,6 +36,15 @@ export const envSchema = z.object({
   GROK_API_KEY: z.string().min(1).optional(),
   /** Default AI provider when a request doesn't pin one. */
   AI_DEFAULT_PROVIDER: z.enum(["anthropic", "openai", "gemini", "grok"]).default("anthropic"),
+  /**
+   * Notification channels (M11). All optional — a channel without its config is
+   * simply inactive. Secrets are never logged (the logger redacts them).
+   */
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+  DISCORD_WEBHOOK_URL: z.string().url().optional(),
+  NOTIFY_WEBHOOK_URL: z.string().url().optional(),
+  NOTIFY_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -63,10 +63,42 @@ describe("decodeSwaps", () => {
     const tx1 = "0x" + "01".repeat(32);
     const tx2 = "0x" + "02".repeat(32);
     const logs = [
-      transferLog({ token: WETH, from: LEADER, to: OTHER, value: 1n, txHash: tx2, logIndex: 0, blockNumber: 200n }),
-      transferLog({ token: MEME, from: OTHER, to: LEADER, value: 2n, txHash: tx2, logIndex: 1, blockNumber: 200n }),
-      transferLog({ token: WETH, from: LEADER, to: OTHER, value: 3n, txHash: tx1, logIndex: 0, blockNumber: 100n }),
-      transferLog({ token: MEME, from: OTHER, to: LEADER, value: 4n, txHash: tx1, logIndex: 1, blockNumber: 100n }),
+      transferLog({
+        token: WETH,
+        from: LEADER,
+        to: OTHER,
+        value: 1n,
+        txHash: tx2,
+        logIndex: 0,
+        blockNumber: 200n,
+      }),
+      transferLog({
+        token: MEME,
+        from: OTHER,
+        to: LEADER,
+        value: 2n,
+        txHash: tx2,
+        logIndex: 1,
+        blockNumber: 200n,
+      }),
+      transferLog({
+        token: WETH,
+        from: LEADER,
+        to: OTHER,
+        value: 3n,
+        txHash: tx1,
+        logIndex: 0,
+        blockNumber: 100n,
+      }),
+      transferLog({
+        token: MEME,
+        from: OTHER,
+        to: LEADER,
+        value: 4n,
+        txHash: tx1,
+        logIndex: 1,
+        blockNumber: 100n,
+      }),
     ];
     const swaps = decodeSwaps(logs, w, [WETH], 8453);
     expect(swaps.map((s) => s.blockNumber)).toEqual([100n, 200n]);

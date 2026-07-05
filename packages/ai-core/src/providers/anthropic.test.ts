@@ -3,8 +3,12 @@ import { AiInfraError, AiValidationError } from "../errors";
 import { AnthropicProvider } from "./anthropic";
 
 function mockFetch(status: number, body: unknown): ReturnType<typeof vi.fn> {
-  const fn = vi.fn(async () =>
-    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+  const fn = vi.fn(
+    async () =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
   );
   vi.stubGlobal("fetch", fn);
   return fn;
@@ -21,7 +25,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("AnthropicProvider", () => {
   const provider = new AnthropicProvider({ apiKey: "sk-test" });
-  const req = { system: "you are a bot", messages: [{ role: "user" as const, content: "hi" }], maxTokens: 100 };
+  const req = {
+    system: "you are a bot",
+    messages: [{ role: "user" as const, content: "hi" }],
+    maxTokens: 100,
+  };
 
   it("maps a successful response and sends the version header", async () => {
     const fetchFn = mockFetch(200, okBody);

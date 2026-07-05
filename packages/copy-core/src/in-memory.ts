@@ -12,9 +12,7 @@ export class InMemoryCopyStore implements CopyStore {
   readonly #copied = new Set<string>();
 
   async upsertWallet(wallet: TrackedWallet): Promise<void> {
-    const activeIds = [...this.#wallets.values()]
-      .filter((w) => w.enabled)
-      .map((w) => w.id);
+    const activeIds = [...this.#wallets.values()].filter((w) => w.enabled).map((w) => w.id);
     assertWithinWalletLimit(activeIds, wallet);
     this.#wallets.set(wallet.id, structuredClone(wallet));
   }

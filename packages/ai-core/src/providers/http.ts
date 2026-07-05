@@ -33,9 +33,13 @@ export async function postJson(
 
   const raw = await response.text();
   if (!response.ok) {
-    throw errorFromStatus(response.status, `provider returned ${response.status}: ${raw.slice(0, 500)}`, {
-      context: { status: response.status },
-    });
+    throw errorFromStatus(
+      response.status,
+      `provider returned ${response.status}: ${raw.slice(0, 500)}`,
+      {
+        context: { status: response.status },
+      },
+    );
   }
   try {
     return JSON.parse(raw);

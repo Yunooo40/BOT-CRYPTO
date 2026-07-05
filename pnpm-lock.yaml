@@ -251,6 +251,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)
 
+  packages/notify-core:
+    dependencies:
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
   packages/rpc-manager:
     dependencies:
       '@bot/config':

@@ -69,7 +69,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
     }
     return {
       text,
-      model: json.model ?? (request.model ?? this.defaultModel),
+      model: json.model ?? request.model ?? this.defaultModel,
       stopReason: choice?.finish_reason ?? "unknown",
       usage: {
         inputTokens: json.usage?.prompt_tokens ?? 0,
