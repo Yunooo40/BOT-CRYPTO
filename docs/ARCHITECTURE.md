@@ -73,28 +73,34 @@ par events uniquement.
 Développement strictement séquentiel, un module à la fois, chacun validé avant le
 suivant. Chaque module est autonome.
 
-| #   | Module          | Livre                                                       |
-| --- | --------------- | ----------------------------------------------------------- |
-| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅             |
-| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅   |
-| M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅           |
-| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅  |
-| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature       |
-| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité    |
-| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                     |
-| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading       |
-| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                           |
-| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes               |
-| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)           |
-| M11 | Notifications   | Telegram, Discord, webhook, email                           |
-| M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting |
-| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics        |
-| M14 | Observabilité   | Métriques, traces, audit trail, alerting                    |
+| #   | Module          | Livre                                                          |
+| --- | --------------- | -------------------------------------------------------------- |
+| M0  | Fondations      | Monorepo, config, logger, errors, CI, Docker ✅                |
+| M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅      |
+| M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅              |
+| M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅     |
+| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature          |
+| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité       |
+| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                        |
+| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading          |
+| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                              |
+| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes                  |
+| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)              |
+| M11 | Notifications   | Telegram, Discord, webhook, email                              |
+| M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting ✅ |
+| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics           |
+| M14 | Observabilité   | Métriques, traces, audit trail, alerting                       |
 
 ## État actuel
 
-**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅** et
-**M3 — DEX Adapters ✅** sont livrés.
+**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
+**M3 — DEX Adapters ✅** et **M12 — API Gateway ✅** sont livrés.
+
+> **Déviation de séquence actée (2026-07-05)** : M12 a été avancé avant M4-M11
+> sur décision explicite, pour poser tôt le socle HTTP/auth et le pattern
+> NestJS des services. Les routes des modules manquants (trading, scanner,
+> positions…) se brancheront sur la gateway au fil de leur livraison.
+> L'ordre séquentiel reprend à **M4 — Wallet Service**.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -120,6 +126,24 @@ suivant. Chaque module est autonome.
   fee-on-transfer ne sont pas modélisées dans la quote (Shield, M6).
   Tests d'intégration opt-in contre un fork anvil ou RPC Base live
   (`BASE_FORK_RPC_URL`), skippés sinon.
+- **M12** : `apps/api-gateway` — première application NestJS du monorepo, point
+  d'entrée REST + WebSocket unique. Auth à deux modes : sessions **JWT** HS256
+  (login email/mot de passe, hash **scrypt**, admin bootstrappé depuis l'env)
+  et **clés API** `bk_…` stockées hashées SHA-256, avec scopes
+  `read`/`trade`/`admin` imposés par guard global (fail-closed). Rate limiting
+  fenêtre glissante sur Redis (buckets par identité + bucket login par IP,
+  `429` + `Retry-After`). Persistance **Drizzle/PostgreSQL** (tables `users`,
+  `api_keys` possédées par la gateway, migrations drizzle-kit) derrière des
+  repositories (impl. in-memory pour tests/paper). WebSocket `/ws` : flux des
+  événements du bus par topics avec contrôle de scope, heartbeat, éviction des
+  consommateurs lents (groupe de consommateurs Redis unique par instance pour
+  obtenir un broadcast). Routes sur l'existant : `/health`, `/v1/status`
+  (probes RPC/Postgres/Redis), `/v1/quotes` (meilleure quote cross-venues M3
+  sur le pool M2). Mapping d'erreurs unique : `ValidationError`→400,
+  `PoolNotFound`→404, `DomainError`→422, `InfraError`→503 (en remontant la
+  chaîne des `cause` — viem enrobe les erreurs du pool), jamais de stack ni de
+  secret en réponse. E2E supertest + ws sur fakes in-memory ; intégration
+  Postgres/Redis opt-in (exigée en CI, services dédiés).
 
-Prochaine étape : **M4 — Wallet Service**. Les `apps/` (services) arrivent quand
-un service concret consomme ces briques.
+Prochaine étape : **M4 — Wallet Service** (l'ordre séquentiel reprend là où il
+s'était arrêté ; M12 a été avancé, voir la note ci-dessus).

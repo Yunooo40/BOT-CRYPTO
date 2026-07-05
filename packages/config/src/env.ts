@@ -20,6 +20,31 @@ export const envSchema = z.object({
    * Only presence is checked here; `@bot/rpc-manager` validates each entry.
    */
   BASE_RPC_URLS: z.string().min(1),
+
+  // --- API Gateway (M12) ---
+
+  /** HTTP/WebSocket listen port of the gateway. */
+  API_PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+  /**
+   * HMAC secret for HS256 access tokens. 32+ chars so brute-forcing the
+   * signature is not the cheapest way in. Rotating it invalidates every
+   * outstanding token — that is the logout-everyone lever.
+   */
+  JWT_SECRET: z.string().min(32),
+  /** Access-token lifetime in seconds. Default 12 h; no refresh tokens in M12. */
+  JWT_TTL_SECONDS: z.coerce.number().int().positive().max(2_592_000).default(43_200),
+  /**
+   * The bootstrap admin account, upserted at gateway boot. The env is the
+   * source of truth for THIS user: changing ADMIN_PASSWORD re-hashes it.
+   */
+  ADMIN_EMAIL: z.string().email(),
+  ADMIN_PASSWORD: z.string().min(12),
+  /** Comma-separated origins allowed by CORS. Empty (default) = same-origin only. */
+  CORS_ORIGINS: z.string().default(""),
+  /** Sliding-window request budget per authenticated identity (or IP). */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+  /** Stricter per-IP budget for `POST /v1/auth/login` (brute-force damper). */
+  RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().positive().default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;
