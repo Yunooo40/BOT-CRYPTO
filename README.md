@@ -3,7 +3,8 @@
 Plateforme de trading de memecoins EVM (chaîne de lancement : **Base**), full
 TypeScript, pensée comme un produit professionnel modulaire et maintenable.
 
-> 🚧 En construction, module par module. État actuel : **M8 — Strategies (cœur)** livré.
+> 🚧 En construction, module par module. État actuel : **M0-M3** livrés + **M12 — API
+> Gateway** (avancé hors séquence sur décision explicite) ; prochaine brique : M4.
 
 ## Fonctionnalités visées
 
@@ -26,29 +27,34 @@ docker compose up -d    # PostgreSQL + Redis
 pnpm check              # typecheck + lint + test + build
 ```
 
+### API Gateway
+
+```bash
+pnpm build                                            # construit dist/
+node --env-file=.env apps/api-gateway/dist/migrate.js # applique les migrations
+node --env-file=.env apps/api-gateway/dist/main.js    # démarre sur API_PORT (3000)
+```
+
+Login : `POST /v1/auth/login` (admin bootstrappé depuis `ADMIN_EMAIL`/`ADMIN_PASSWORD`),
+puis JWT ou clé API (`POST /v1/api-keys`) en `Authorization: Bearer …`.
+Routes : `/health`, `/v1/status`, `/v1/quotes`, `/v1/api-keys`, WebSocket `/ws`
+(flux d'événements du bus par topics).
+
 ## Structure
 
 Monorepo pnpm + Turborepo.
 
-| Chemin                     | Rôle                                                                 |
-| -------------------------- | -------------------------------------------------------------------- |
-| `packages/config`          | `@bot/config` — env typé et validé (fail-fast au boot)               |
-| `packages/logger`          | `@bot/logger` — logs structurés, secrets redactés                    |
-| `packages/errors`          | `@bot/errors` — hiérarchie d'erreurs classifiables                   |
-| `packages/domain`          | `@bot/domain` — value objects et entités du domaine                  |
-| `packages/events`          | `@bot/events` — contrat d'événements + bus Redis typé                |
-| `packages/rpc-manager`     | `@bot/rpc-manager` — pool RPC : failover, health checks              |
-| `packages/dex-adapters`    | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata    |
-| `packages/wallet-core`     | `@bot/wallet-core` — wallets chiffrés AES-256-GCM, signature         |
-| `packages/scanner-core`    | `@bot/scanner-core` — détection temps réel des nouveaux pools        |
-| `packages/shield-core`     | `@bot/shield-core` — Rugpull Shield : 11 détecteurs, score de risque |
-| `packages/engine-core`     | `@bot/engine-core` — exécution : paper/live, retry, positions        |
-| `packages/strategies-core` | `@bot/strategies-core` — limit, TP, SL, trailing, DCA                |
-| `packages/copy-core`       | `@bot/copy-core` — copy trading : suivi de wallets, copie %          |
-| `packages/ai-core`         | `@bot/ai-core` — moteur IA multi-provider                            |
-| `packages/notify-core`     | `@bot/notify-core` — Telegram, Discord, webhook, email               |
-| `apps/`                    | services déployables (quand un service consomme ces briques)         |
-| `docs/`                    | architecture et décisions                                            |
+| Chemin                  | Rôle                                                              |
+| ----------------------- | ----------------------------------------------------------------- |
+| `packages/config`       | `@bot/config` — env typé et validé (fail-fast au boot)            |
+| `packages/logger`       | `@bot/logger` — logs structurés, secrets redactés                 |
+| `packages/errors`       | `@bot/errors` — hiérarchie d'erreurs classifiables                |
+| `packages/domain`       | `@bot/domain` — value objects et entités du domaine               |
+| `packages/events`       | `@bot/events` — contrat d'événements + bus Redis typé             |
+| `packages/rpc-manager`  | `@bot/rpc-manager` — pool RPC : failover, health checks           |
+| `packages/dex-adapters` | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata |
+| `apps/api-gateway`      | point d'entrée REST + WebSocket : auth, clés API, rate limiting   |
+| `docs/`                 | architecture et décisions                                         |
 
 ## Licence
 

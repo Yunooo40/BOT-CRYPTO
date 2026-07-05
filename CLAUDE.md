@@ -49,7 +49,8 @@ packages/   # librairies partagées, sans effet de bord réseau
   config/   # @bot/config  — env typé + validé (Zod), fail-fast
   logger/   # @bot/logger  — pino structuré, redaction des secrets
   errors/   # @bot/errors  — hiérarchie d'erreurs (Domain/Infra/Validation)
-apps/        # services déployables (arrivent à partir de M1)
+apps/        # services déployables
+  api-gateway/ # REST + WebSocket : auth JWT/clés API, scopes, rate limit, events
 docs/        # ARCHITECTURE.md et décisions
 ```
 

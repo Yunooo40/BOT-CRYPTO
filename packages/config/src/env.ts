@@ -20,31 +20,31 @@ export const envSchema = z.object({
    * Only presence is checked here; `@bot/rpc-manager` validates each entry.
    */
   BASE_RPC_URLS: z.string().min(1),
+
+  // --- API Gateway (M12) ---
+
+  /** HTTP/WebSocket listen port of the gateway. */
+  API_PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
   /**
-   * Wallet master passphrase (M4): the AES-256-GCM key-encryption key is
-   * derived from it (scrypt, per-record salt). Never logged, never stored.
+   * HMAC secret for HS256 access tokens. 32+ chars so brute-forcing the
+   * signature is not the cheapest way in. Rotating it invalidates every
+   * outstanding token — that is the logout-everyone lever.
    */
-  WALLET_MASTER_KEY: z.string().min(16, "must be at least 16 characters"),
+  JWT_SECRET: z.string().min(32),
+  /** Access-token lifetime in seconds. Default 12 h; no refresh tokens in M12. */
+  JWT_TTL_SECONDS: z.coerce.number().int().positive().max(2_592_000).default(43_200),
   /**
-   * AI provider keys (M10). All optional — the AI Service is a capability, not
-   * a boot prerequisite; a provider without its key is simply unavailable.
-   * Never logged (the logger redacts; don't pass them where they'd be printed).
+   * The bootstrap admin account, upserted at gateway boot. The env is the
+   * source of truth for THIS user: changing ADMIN_PASSWORD re-hashes it.
    */
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional(),
-  GEMINI_API_KEY: z.string().min(1).optional(),
-  GROK_API_KEY: z.string().min(1).optional(),
-  /** Default AI provider when a request doesn't pin one. */
-  AI_DEFAULT_PROVIDER: z.enum(["anthropic", "openai", "gemini", "grok"]).default("anthropic"),
-  /**
-   * Notification channels (M11). All optional — a channel without its config is
-   * simply inactive. Secrets are never logged (the logger redacts them).
-   */
-  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
-  TELEGRAM_CHAT_ID: z.string().min(1).optional(),
-  DISCORD_WEBHOOK_URL: z.string().url().optional(),
-  NOTIFY_WEBHOOK_URL: z.string().url().optional(),
-  NOTIFY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  ADMIN_EMAIL: z.string().email(),
+  ADMIN_PASSWORD: z.string().min(12),
+  /** Comma-separated origins allowed by CORS. Empty (default) = same-origin only. */
+  CORS_ORIGINS: z.string().default(""),
+  /** Sliding-window request budget per authenticated identity (or IP). */
+  RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+  /** Stricter per-IP budget for `POST /v1/auth/login` (brute-force damper). */
+  RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().positive().default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;
