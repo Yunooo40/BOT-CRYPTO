@@ -33,6 +33,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)
 
+  packages/ai-core:
+    dependencies:
+      '@bot/config':
+        specifier: workspace:*
+        version: link:../config
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
   packages/config:
     dependencies:
       '@bot/errors':
@@ -41,6 +66,43 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/copy-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -82,6 +144,43 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/engine-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -152,6 +251,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.0)
 
+  packages/notify-core:
+    dependencies:
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
   packages/rpc-manager:
     dependencies:
       '@bot/config':
@@ -163,6 +287,142 @@ importers:
       '@bot/logger':
         specifier: workspace:*
         version: link:../logger
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/scanner-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/shield-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/strategies-core:
+    dependencies:
+      '@bot/dex-adapters':
+        specifier: workspace:*
+        version: link:../dex-adapters
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@bot/events':
+        specifier: workspace:*
+        version: link:../events
+      '@bot/logger':
+        specifier: workspace:*
+        version: link:../logger
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
+      viem:
+        specifier: ^2.21.0
+        version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.16)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.0)
+
+  packages/wallet-core:
+    dependencies:
+      '@bot/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bot/errors':
+        specifier: workspace:*
+        version: link:../errors
+      drizzle-orm:
+        specifier: ^0.38.3
+        version: 0.38.4(postgres@3.4.9)
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.9
       viem:
         specifier: ^2.21.0
         version: 2.54.2(typescript@5.9.3)(zod@3.25.76)
@@ -970,6 +1230,98 @@ packages:
     resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
     engines: {node: '>=0.10'}
 
+  drizzle-orm@0.38.4:
+    resolution: {integrity: sha512-s7/5BpLKO+WJRHspvpqTydxFob8i1vo2rEx4pY6TGY7QSMuUfWUuzaY0DIpXCkgHOo37BaFC+SJQb99dDUXT3Q==}
+    peerDependencies:
+      '@aws-sdk/client-rds-data': '>=3'
+      '@cloudflare/workers-types': '>=4'
+      '@electric-sql/pglite': '>=0.2.0'
+      '@libsql/client': '>=0.10.0'
+      '@libsql/client-wasm': '>=0.10.0'
+      '@neondatabase/serverless': '>=0.10.0'
+      '@op-engineering/op-sqlite': '>=2'
+      '@opentelemetry/api': ^1.4.1
+      '@planetscale/database': '>=1'
+      '@prisma/client': '*'
+      '@tidbcloud/serverless': '*'
+      '@types/better-sqlite3': '*'
+      '@types/pg': '*'
+      '@types/react': '>=18'
+      '@types/sql.js': '*'
+      '@vercel/postgres': '>=0.8.0'
+      '@xata.io/client': '*'
+      better-sqlite3: '>=7'
+      bun-types: '*'
+      expo-sqlite: '>=14.0.0'
+      knex: '*'
+      kysely: '*'
+      mysql2: '>=2'
+      pg: '>=8'
+      postgres: '>=3'
+      prisma: '*'
+      react: '>=18'
+      sql.js: '>=1'
+      sqlite3: '>=5'
+    peerDependenciesMeta:
+      '@aws-sdk/client-rds-data':
+        optional: true
+      '@cloudflare/workers-types':
+        optional: true
+      '@electric-sql/pglite':
+        optional: true
+      '@libsql/client':
+        optional: true
+      '@libsql/client-wasm':
+        optional: true
+      '@neondatabase/serverless':
+        optional: true
+      '@op-engineering/op-sqlite':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+      '@planetscale/database':
+        optional: true
+      '@prisma/client':
+        optional: true
+      '@tidbcloud/serverless':
+        optional: true
+      '@types/better-sqlite3':
+        optional: true
+      '@types/pg':
+        optional: true
+      '@types/react':
+        optional: true
+      '@types/sql.js':
+        optional: true
+      '@vercel/postgres':
+        optional: true
+      '@xata.io/client':
+        optional: true
+      better-sqlite3:
+        optional: true
+      bun-types:
+        optional: true
+      expo-sqlite:
+        optional: true
+      knex:
+        optional: true
+      kysely:
+        optional: true
+      mysql2:
+        optional: true
+      pg:
+        optional: true
+      postgres:
+        optional: true
+      prisma:
+        optional: true
+      react:
+        optional: true
+      sql.js:
+        optional: true
+      sqlite3:
+        optional: true
+
   end-of-stream@1.4.5:
     resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
 
@@ -1324,6 +1676,10 @@ packages:
   postcss@8.5.16:
     resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
+
+  postgres@3.4.9:
+    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
+    engines: {node: '>=12'}
 
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
@@ -2229,6 +2585,10 @@ snapshots:
 
   denque@2.1.0: {}
 
+  drizzle-orm@0.38.4(postgres@3.4.9):
+    optionalDependencies:
+      postgres: 3.4.9
+
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
@@ -2637,6 +2997,8 @@ snapshots:
       nanoid: 3.3.15
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  postgres@3.4.9: {}
 
   prelude-ls@1.2.1: {}
 
