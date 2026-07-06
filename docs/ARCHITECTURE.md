@@ -79,28 +79,31 @@ suivant. Chaque module est autonome.
 | M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅      |
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅              |
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅     |
-| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature          |
-| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité       |
-| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué                        |
-| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading          |
-| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA                              |
-| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes                  |
-| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok)              |
-| M11 | Notifications   | Telegram, Discord, webhook, email                              |
+| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅        |
+| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅     |
+| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                      |
+| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅        |
+| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                            |
+| M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes ✅               |
+| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅            |
+| M11 | Notifications   | Telegram, Discord, webhook, email ✅                            |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting ✅ |
 | M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics           |
 | M14 | Observabilité   | Métriques, traces, audit trail, alerting                       |
 
 ## État actuel
 
-**M0 — Fondations ✅**, **M1 — Domain & Events ✅**, **M2 — RPC Manager ✅**,
-**M3 — DEX Adapters ✅** et **M12 — API Gateway ✅** sont livrés.
+**M0 → M12 sont livrés** : **M0 — Fondations ✅**, **M1 — Domain & Events ✅**,
+**M2 — RPC Manager ✅**, **M3 — DEX Adapters ✅**, **M4 — Wallet Service ✅**,
+**M5 — Scanner ✅**, **M6 — Rugpull Shield ✅**, **M7 — Trading Engine ✅**,
+**M8 — Strategies ✅**, **M9 — Copy Trading ✅**, **M10 — AI Service ✅**,
+**M11 — Notifications ✅** et **M12 — API Gateway ✅**.
 
 > **Déviation de séquence actée (2026-07-05)** : M12 a été avancé avant M4-M11
 > sur décision explicite, pour poser tôt le socle HTTP/auth et le pattern
-> NestJS des services. Les routes des modules manquants (trading, scanner,
-> positions…) se brancheront sur la gateway au fil de leur livraison.
-> L'ordre séquentiel reprend à **M4 — Wallet Service**.
+> NestJS des services. La séquence M4 → M11 a ensuite été livrée dans l'ordre ;
+> les routes de ces modules se brancheront sur la gateway au fil de leur
+> exposition HTTP/WebSocket.
 
 - **M0** : monorepo pnpm + Turborepo, TypeScript strict, packages socles
   (`@bot/config`, `@bot/logger`, `@bot/errors`), CI GitHub Actions, stack de dev
@@ -144,6 +147,21 @@ suivant. Chaque module est autonome.
   chaîne des `cause` — viem enrobe les erreurs du pool), jamais de stack ni de
   secret en réponse. E2E supertest + ws sur fakes in-memory ; intégration
   Postgres/Redis opt-in (exigée en CI, services dédiés).
+- **M4** : `@bot/wallet-core` — génération/import de wallets, chiffrement des
+  clés privées en AES-256-GCM, signature de transactions. Aucune clé en clair
+  hors de ce module.
+- **M5** : `@bot/scanner-core` — détection temps réel des nouveaux tokens,
+  pools et évolutions de liquidité.
+- **M6** : `@bot/shield-core` — Rugpull Shield : 11 détecteurs de risque et
+  score expliqué.
+- **M7** : `@bot/engine-core` — Trading Engine : sniping, achat/vente,
+  auto-sell, retry, paper trading.
+- **M8** : `@bot/strategies-core` — stratégies : limit, take-profit, stop-loss,
+  trailing stop, DCA.
+- **M9** : `@bot/copy-core` — Copy Trading : suivi de wallets (≤ 50), copie en
+  pourcentage, gestion du slippage et des listes.
+- **M10** : `@bot/ai-core` — moteur IA multi-provider (OpenAI/Gemini/Claude/Grok).
+- **M11** : `@bot/notify-core` — notifications Telegram, Discord, webhook, email.
 
-Prochaine étape : **M4 — Wallet Service** (l'ordre séquentiel reprend là où il
-s'était arrêté ; M12 a été avancé, voir la note ci-dessus).
+Prochaine étape : **M13 — Dashboard** (Next.js — PnL, ROI, positions, historique,
+analytics), puis **M14 — Observabilité**.
