@@ -88,16 +88,16 @@ suivant. Chaque module est autonome.
 | M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅           |
 | M11 | Notifications   | Telegram, Discord, webhook, email ✅                           |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting ✅ |
-| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics           |
+| M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics ✅        |
 | M14 | Observabilité   | Métriques, traces, audit trail, alerting                       |
 
 ## État actuel
 
-**M0 → M12 sont livrés** : **M0 — Fondations ✅**, **M1 — Domain & Events ✅**,
+**M0 → M13 sont livrés** : **M0 — Fondations ✅**, **M1 — Domain & Events ✅**,
 **M2 — RPC Manager ✅**, **M3 — DEX Adapters ✅**, **M4 — Wallet Service ✅**,
 **M5 — Scanner ✅**, **M6 — Rugpull Shield ✅**, **M7 — Trading Engine ✅**,
 **M8 — Strategies ✅**, **M9 — Copy Trading ✅**, **M10 — AI Service ✅**,
-**M11 — Notifications ✅** et **M12 — API Gateway ✅**.
+**M11 — Notifications ✅**, **M12 — API Gateway ✅** et **M13 — Dashboard ✅**.
 
 > **Déviation de séquence actée (2026-07-05)** : M12 a été avancé avant M4-M11
 > sur décision explicite, pour poser tôt le socle HTTP/auth et le pattern
@@ -162,6 +162,20 @@ suivant. Chaque module est autonome.
   pourcentage, gestion du slippage et des listes.
 - **M10** : `@bot/ai-core` — moteur IA multi-provider (OpenAI/Gemini/Claude/Grok).
 - **M11** : `@bot/notify-core` — notifications Telegram, Discord, webhook, email.
+- **M13** : `apps/dashboard` — Next.js (App Router), lecture seule sur la
+  gateway. La gateway se dote de son propre read-model (M13, pas M7/M12) :
+  table `trade_history` (log append-only, idempotent sur l'id du trade) et
+  table `portfolio_positions`, toutes deux alimentées par un subscriber
+  (`PortfolioIngestor`) qui rejoue `trade.executed` et refolde via
+  `applyTrade()` — la fonction pure déjà testée du Trading Engine — plutôt que
+  de lire les tables de `engine-core` directement (pas de couplage caché entre
+  apps). Nouvelles routes gateway : `GET /v1/positions` (PnL non réalisé prix
+  en direct via `/v1/quotes`), `GET /v1/trades` (paginé par curseur
+  `occurredAt`+id), `GET /v1/analytics/summary` (ROI, win rate, PnL par
+  jour/token, réel vs paper). Dashboard : auth JWT (cookie `httpOnly`, scope
+  `read` uniquement — aucune action de trading depuis l'UI), pages Positions /
+  Historique / Analytics, rafraîchi en direct via le flux WebSocket existant
+  (`/ws`, M12) plutôt qu'un polling.
 
-Prochaine étape : **M13 — Dashboard** (Next.js — PnL, ROI, positions, historique,
-analytics), puis **M14 — Observabilité**.
+Prochaine étape : **M14 — Observabilité** (métriques, traces, audit trail,
+alerting).

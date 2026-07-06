@@ -15,8 +15,17 @@ import { JwtService } from "./auth/jwt.service";
 import { ScopesGuard } from "./auth/scopes.guard";
 import { GatewayExceptionFilter } from "./common/exception.filter";
 import { createDatabase, type DatabaseHandle } from "./db/client";
-import { PostgresApiKeyRepository, PostgresUserRepository } from "./db/postgres-repositories";
+import {
+  DrizzleTradeHistoryRepository,
+  DrizzlePortfolioPositionsRepository,
+  PostgresApiKeyRepository,
+  PostgresUserRepository,
+} from "./db/postgres-repositories";
 import { InfraLifecycle } from "./infra-lifecycle";
+import { AnalyticsController } from "./portfolio/analytics.controller";
+import { PortfolioIngestor } from "./portfolio/ingestor";
+import { PositionsController } from "./portfolio/positions.controller";
+import { TradesController } from "./portfolio/trades.controller";
 import { DexQuoteFinder } from "./quotes/quote-finder";
 import { QuotesController } from "./quotes/quotes.controller";
 import { RateLimitGuard } from "./rate-limit/rate-limit.guard";
@@ -30,11 +39,13 @@ import {
   ENV,
   EVENT_BUS,
   LOGGER,
+  PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
   REDIS,
   RPC_POOL,
   STATUS_PROBES,
+  TRADE_HISTORY_REPOSITORY,
   USER_REPOSITORY,
 } from "./tokens";
 import { EventsGateway } from "./ws/events.gateway";
@@ -53,6 +64,9 @@ import { EventsGateway } from "./ws/events.gateway";
     AuthController,
     ApiKeysController,
     QuotesController,
+    PositionsController,
+    TradesController,
+    AnalyticsController,
   ],
   providers: [
     { provide: ENV, useFactory: (): Env => loadEnv() },
@@ -97,6 +111,18 @@ import { EventsGateway } from "./ws/events.gateway";
       inject: [DATABASE],
     },
     {
+      provide: TRADE_HISTORY_REPOSITORY,
+      useFactory: (handle: DatabaseHandle): DrizzleTradeHistoryRepository =>
+        new DrizzleTradeHistoryRepository(handle.db),
+      inject: [DATABASE],
+    },
+    {
+      provide: PORTFOLIO_POSITIONS,
+      useFactory: (handle: DatabaseHandle): DrizzlePortfolioPositionsRepository =>
+        new DrizzlePortfolioPositionsRepository(handle.db),
+      inject: [DATABASE],
+    },
+    {
       provide: RATE_LIMIT_STORE,
       useFactory: (redis: Redis): RedisRateLimitStore => new RedisRateLimitStore(redis),
       inject: [REDIS],
@@ -120,6 +146,7 @@ import { EventsGateway } from "./ws/events.gateway";
     AuthService,
     AdminBootstrap,
     EventsGateway,
+    PortfolioIngestor,
     InfraLifecycle,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: ScopesGuard },

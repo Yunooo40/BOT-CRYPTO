@@ -1,4 +1,13 @@
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import type { Scope } from "../auth/scopes";
 
 /**
@@ -37,3 +46,46 @@ export const apiKeys = pgTable(
   },
   (table) => [index("api_keys_user_id_idx").on(table.userId)],
 );
+
+/**
+ * The gateway's own read-model for the dashboard (M13), built by replaying
+ * `trade.executed` off the bus (see `portfolio/ingestor.ts`) — never by
+ * reading another service's tables directly. `id` is the trade id, so a
+ * redelivered event is a no-op insert (`onConflictDoNothing`).
+ */
+export const tradeHistory = pgTable(
+  "trade_history",
+  {
+    id: text("id").primaryKey(),
+    chainId: integer("chain_id").notNull(),
+    side: text("side", { enum: ["buy", "sell"] }).notNull(),
+    token: text("token").notNull(),
+    /** Base units + decimals: a buy's `amountIn` is the quote asset, a sell's `amountOut` is. */
+    amountIn: bigint("amount_in", { mode: "bigint" }).notNull(),
+    amountInDecimals: integer("amount_in_decimals").notNull(),
+    amountOut: bigint("amount_out", { mode: "bigint" }).notNull(),
+    amountOutDecimals: integer("amount_out_decimals").notNull(),
+    txHash: text("tx_hash").notNull(),
+    simulated: boolean("simulated").notNull(),
+    occurredAt: bigint("occurred_at", { mode: "number" }).notNull(),
+  },
+  (table) => [index("trade_history_occurred_at_idx").on(table.occurredAt)],
+);
+
+/**
+ * Positions folded from the same `trade.executed` stream via
+ * `@bot/engine-core`'s pure `applyTrade`. Deliberately its own table (not the
+ * Trading Engine's `positions` table): the gateway must keep working even if
+ * the engine's storage changes shape.
+ */
+export const portfolioPositions = pgTable("portfolio_positions", {
+  id: text("id").primaryKey(),
+  chainId: integer("chain_id").notNull(),
+  token: text("token").notNull(),
+  simulated: boolean("simulated").notNull(),
+  amount: bigint("amount", { mode: "bigint" }).notNull(),
+  costBasis: bigint("cost_basis", { mode: "bigint" }).notNull(),
+  realizedPnl: bigint("realized_pnl", { mode: "bigint" }).notNull(),
+  openedAt: bigint("opened_at", { mode: "number" }).notNull(),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+});
