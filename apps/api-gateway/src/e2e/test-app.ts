@@ -3,8 +3,9 @@ import { loadEnv, type Env } from "@bot/config";
 import { PoolNotFoundError } from "@bot/dex-adapters";
 import { poolSchema, toAddress } from "@bot/domain";
 import { InMemoryPositionStore, type PositionStore } from "@bot/engine-core";
-import { InMemoryEventBus } from "@bot/events";
+import { InMemoryEventBus, type EventBus } from "@bot/events";
 import { createLogger } from "@bot/logger";
+import { InMemoryAuditSink, MeteredEventBus, MetricRegistry } from "@bot/observability-core";
 import { RpcInfraError } from "@bot/rpc-manager";
 import type { INestApplication } from "@nestjs/common";
 import { WsAdapter } from "@nestjs/platform-ws";
@@ -16,10 +17,12 @@ import { InMemoryRateLimitStore } from "../rate-limit/in-memory-store";
 import type { QuoteFinder } from "../quotes/quote-finder";
 import {
   API_KEY_REPOSITORY,
+  AUDIT_SINK,
   DATABASE,
   ENV,
   EVENT_BUS,
   LOGGER,
+  METRICS,
   PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
@@ -74,7 +77,9 @@ const fakeQuoteFinder: QuoteFinder = {
 
 export interface TestApp {
   app: INestApplication;
-  bus: InMemoryEventBus;
+  bus: EventBus;
+  metrics: MetricRegistry;
+  auditSink: InMemoryAuditSink;
   users: InMemoryUserRepository;
   apiKeys: InMemoryApiKeyRepository;
   tradeHistory: InMemoryTradeHistoryRepository;
@@ -99,7 +104,11 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
     ...envOverrides,
   });
 
-  const bus = new InMemoryEventBus();
+  const metrics = new MetricRegistry();
+  const auditSink = new InMemoryAuditSink();
+  // Same metered wrapper as production, over an in-memory bus: publishing through
+  // it exercises the /metrics counters and drives the Auditor into `auditSink`.
+  const bus = new MeteredEventBus(new InMemoryEventBus(), metrics);
   const users = new InMemoryUserRepository();
   const apiKeys = new InMemoryApiKeyRepository();
   const tradeHistory = new InMemoryTradeHistoryRepository();
@@ -125,6 +134,10 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
     .useValue({ quit: async () => "OK" })
     .overrideProvider(EVENT_BUS)
     .useValue(bus)
+    .overrideProvider(METRICS)
+    .useValue(metrics)
+    .overrideProvider(AUDIT_SINK)
+    .useValue(auditSink)
     .overrideProvider(USER_REPOSITORY)
     .useValue(users)
     .overrideProvider(API_KEY_REPOSITORY)
@@ -144,5 +157,5 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
   const app = moduleRef.createNestApplication({ logger: false });
   app.useWebSocketAdapter(new WsAdapter(app));
   await app.init(); // runs AdminBootstrap: the admin user exists after this
-  return { app, bus, users, apiKeys, tradeHistory, positions, env };
+  return { app, bus, metrics, auditSink, users, apiKeys, tradeHistory, positions, env };
 }

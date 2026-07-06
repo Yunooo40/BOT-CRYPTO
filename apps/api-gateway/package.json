@@ -20,6 +20,7 @@
     "@bot/errors": "workspace:*",
     "@bot/events": "workspace:*",
     "@bot/logger": "workspace:*",
+    "@bot/observability-core": "workspace:*",
     "@bot/rpc-manager": "workspace:*",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",

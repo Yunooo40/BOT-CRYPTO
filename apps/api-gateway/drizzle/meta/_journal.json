@@ -15,6 +15,13 @@
       "when": 1783326237121,
       "tag": "0001_milky_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783331411454,
+      "tag": "0002_polite_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

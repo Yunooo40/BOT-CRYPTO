@@ -1,7 +1,8 @@
 import { loadEnv, type Env } from "@bot/config";
 import { createDexAdapters } from "@bot/dex-adapters";
-import { RedisEventBus } from "@bot/events";
+import { RedisEventBus, type EventBus } from "@bot/events";
 import { createLogger, type Logger } from "@bot/logger";
+import { MeteredEventBus, MetricRegistry } from "@bot/observability-core";
 import { rpcEndpointsFromEnv, RpcPool } from "@bot/rpc-manager";
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
@@ -19,9 +20,13 @@ import {
   DrizzleTradeHistoryRepository,
   DrizzlePortfolioPositionsRepository,
   PostgresApiKeyRepository,
+  PostgresAuditSink,
   PostgresUserRepository,
 } from "./db/postgres-repositories";
 import { InfraLifecycle } from "./infra-lifecycle";
+import { AlertService } from "./observability/alert.service";
+import { AuditService } from "./observability/audit.service";
+import { MetricsController } from "./observability/metrics.controller";
 import { AnalyticsController } from "./portfolio/analytics.controller";
 import { PortfolioIngestor } from "./portfolio/ingestor";
 import { PositionsController } from "./portfolio/positions.controller";
@@ -34,11 +39,13 @@ import { postgresProbe, redisProbe, rpcProbe } from "./status/probes";
 import { HealthController, StatusController } from "./status/status.controller";
 import {
   API_KEY_REPOSITORY,
+  AUDIT_SINK,
   CLOCK,
   DATABASE,
   ENV,
   EVENT_BUS,
   LOGGER,
+  METRICS,
   PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
@@ -61,6 +68,7 @@ import { EventsGateway } from "./ws/events.gateway";
   controllers: [
     HealthController,
     StatusController,
+    MetricsController,
     AuthController,
     ApiKeysController,
     QuotesController,
@@ -76,6 +84,7 @@ import { EventsGateway } from "./ws/events.gateway";
       inject: [ENV],
     },
     { provide: CLOCK, useValue: (): number => Date.now() },
+    { provide: METRICS, useFactory: (): MetricRegistry => new MetricRegistry() },
     {
       provide: RPC_POOL,
       useFactory: (env: Env, logger: Logger): RpcPool =>
@@ -93,10 +102,13 @@ import { EventsGateway } from "./ws/events.gateway";
       inject: [ENV],
     },
     {
+      // The real Redis bus, wrapped so every publish/consume is metered into
+      // the shared registry that `/metrics` exposes. The wrapper is transparent:
+      // `InfraLifecycle` still closes it through the same EVENT_BUS token.
       provide: EVENT_BUS,
-      useFactory: (redis: Redis, logger: Logger): RedisEventBus =>
-        new RedisEventBus({ redis, logger }),
-      inject: [REDIS, LOGGER],
+      useFactory: (redis: Redis, logger: Logger, metrics: MetricRegistry): EventBus =>
+        new MeteredEventBus(new RedisEventBus({ redis, logger }), metrics),
+      inject: [REDIS, LOGGER, METRICS],
     },
     {
       provide: USER_REPOSITORY,
@@ -120,6 +132,11 @@ import { EventsGateway } from "./ws/events.gateway";
       provide: PORTFOLIO_POSITIONS,
       useFactory: (handle: DatabaseHandle): DrizzlePortfolioPositionsRepository =>
         new DrizzlePortfolioPositionsRepository(handle.db),
+      inject: [DATABASE],
+    },
+    {
+      provide: AUDIT_SINK,
+      useFactory: (handle: DatabaseHandle): PostgresAuditSink => new PostgresAuditSink(handle.db),
       inject: [DATABASE],
     },
     {
@@ -147,6 +164,8 @@ import { EventsGateway } from "./ws/events.gateway";
     AdminBootstrap,
     EventsGateway,
     PortfolioIngestor,
+    AuditService,
+    AlertService,
     InfraLifecycle,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: ScopesGuard },

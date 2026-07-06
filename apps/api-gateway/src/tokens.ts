@@ -48,3 +48,9 @@ export const TRADE_HISTORY_REPOSITORY = Symbol("TRADE_HISTORY_REPOSITORY");
 
 /** `PositionStore` (from `@bot/engine-core`) backing the gateway's own position book. */
 export const PORTFOLIO_POSITIONS = Symbol("PORTFOLIO_POSITIONS");
+
+/** `MetricRegistry` (from `@bot/observability-core`) — the process-wide `/metrics` source. */
+export const METRICS = Symbol("METRICS");
+
+/** `AuditSink` port — Postgres in production, in-memory in tests. */
+export const AUDIT_SINK = Symbol("AUDIT_SINK");

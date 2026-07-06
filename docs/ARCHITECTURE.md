@@ -89,15 +89,16 @@ suivant. Chaque module est autonome.
 | M11 | Notifications   | Telegram, Discord, webhook, email ✅                           |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting ✅ |
 | M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics ✅        |
-| M14 | Observabilité   | Métriques, traces, audit trail, alerting                       |
+| M14 | Observabilité   | Métriques, traces, audit trail, alerting ✅                    |
 
 ## État actuel
 
-**M0 → M13 sont livrés** : **M0 — Fondations ✅**, **M1 — Domain & Events ✅**,
+**M0 → M14 sont livrés** : **M0 — Fondations ✅**, **M1 — Domain & Events ✅**,
 **M2 — RPC Manager ✅**, **M3 — DEX Adapters ✅**, **M4 — Wallet Service ✅**,
 **M5 — Scanner ✅**, **M6 — Rugpull Shield ✅**, **M7 — Trading Engine ✅**,
 **M8 — Strategies ✅**, **M9 — Copy Trading ✅**, **M10 — AI Service ✅**,
-**M11 — Notifications ✅**, **M12 — API Gateway ✅** et **M13 — Dashboard ✅**.
+**M11 — Notifications ✅**, **M12 — API Gateway ✅**, **M13 — Dashboard ✅** et
+**M14 — Observabilité ✅**.
 
 > **Déviation de séquence actée (2026-07-05)** : M12 a été avancé avant M4-M11
 > sur décision explicite, pour poser tôt le socle HTTP/auth et le pattern
@@ -177,5 +178,21 @@ suivant. Chaque module est autonome.
   Historique / Analytics, rafraîchi en direct via le flux WebSocket existant
   (`/ws`, M12) plutôt qu'un polling.
 
-Prochaine étape : **M14 — Observabilité** (métriques, traces, audit trail,
-alerting).
+- **M14** : `@bot/observability-core` — cœur d'observabilité sans dépendance
+  lourde. **Métriques** : registre maison au format d'exposition Prometheus
+  (counter/gauge/histogram avec labels) et `MeteredEventBus`, décorateur
+  transparent de n'importe quel `EventBus` qui compte publish/consume/échecs de
+  handler et mesure la latence par type d'événement. **Audit trail** :
+  `AuditRecord` append-only (qui/quoi/quand/corrélation/résultat), `AuditSink`
+  (impl. in-memory + `PostgresAuditSink` Drizzle, table `audit_log` idempotente
+  sur l'id d'événement), `Auditor` qui transforme les événements sensibles
+  (`trade.executed`, `trade.failed`) en enregistrements — sans jamais copier de
+  secret, bigints rendus en chaînes. **Alerting** : `AlertEngine` à seuils sur
+  fenêtre glissante avec cooldown anti-spam et règles par défaut (pic d'échecs
+  de trades, verdicts danger répétés), émission via `@bot/notify-core`
+  (`alertToNotification`). **Traces** : légères, appuyées sur le `correlationId`
+  déjà porté par chaque événement (pas d'OpenTelemetry). Branchement gateway :
+  `GET /metrics` (scope `read`), bus enveloppé dans le `MeteredEventBus`, et
+  services de cycle de vie `AuditService` / `AlertService`.
+
+Tous les modules de la feuille de route (M0 → M14) sont livrés.
