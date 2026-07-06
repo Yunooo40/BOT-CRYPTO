@@ -45,6 +45,17 @@ export const envSchema = z.object({
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
   /** Stricter per-IP budget for `POST /v1/auth/login` (brute-force damper). */
   RATE_LIMIT_LOGIN_PER_MINUTE: z.coerce.number().int().positive().default(10),
+
+  // --- Alerting (M14) ---
+
+  /**
+   * Telegram bot token for the alert channel (M14). Both this and
+   * `TELEGRAM_ALERT_CHAT_ID` must be set for alerts to page Telegram; absent
+   * either, alerting stays log-only (no external token required to boot).
+   */
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  /** Chat/channel id `sendMessage` targets for fired alerts. */
+  TELEGRAM_ALERT_CHAT_ID: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

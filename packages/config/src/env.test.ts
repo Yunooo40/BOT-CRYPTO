@@ -67,4 +67,20 @@ describe("loadEnv", () => {
     expect(() => loadEnv({})).toThrow(/JWT_SECRET/);
     expect(() => loadEnv({})).toThrow(/ADMIN_EMAIL/);
   });
+
+  it("leaves Telegram alerting unset by default (log-only alerting)", () => {
+    const env = loadEnv(validEnv);
+    expect(env.TELEGRAM_BOT_TOKEN).toBeUndefined();
+    expect(env.TELEGRAM_ALERT_CHAT_ID).toBeUndefined();
+  });
+
+  it("accepts Telegram alerting config when both variables are set", () => {
+    const env = loadEnv({
+      ...validEnv,
+      TELEGRAM_BOT_TOKEN: "123:abc",
+      TELEGRAM_ALERT_CHAT_ID: "-100200300",
+    });
+    expect(env.TELEGRAM_BOT_TOKEN).toBe("123:abc");
+    expect(env.TELEGRAM_ALERT_CHAT_ID).toBe("-100200300");
+  });
 });

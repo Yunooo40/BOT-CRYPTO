@@ -190,9 +190,14 @@ suivant. Chaque module est autonome.
   secret, bigints rendus en chaînes. **Alerting** : `AlertEngine` à seuils sur
   fenêtre glissante avec cooldown anti-spam et règles par défaut (pic d'échecs
   de trades, verdicts danger répétés), émission via `@bot/notify-core`
-  (`alertToNotification`). **Traces** : légères, appuyées sur le `correlationId`
-  déjà porté par chaque événement (pas d'OpenTelemetry). Branchement gateway :
-  `GET /metrics` (scope `read`), bus enveloppé dans le `MeteredEventBus`, et
-  services de cycle de vie `AuditService` / `AlertService`.
+  (`alertToNotification`). Chaque alerte est toujours loggée (ligne
+  structurée, jamais dépendante d'un service externe) et systématiquement
+  remise à un `NotificationDispatcher` : sans config c'est un no-op sûr (zéro
+  notifier), et avec `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ALERT_CHAT_ID` renseignés
+  elle part réellement sur Telegram via `TelegramNotifier`. **Traces** :
+  légères, appuyées sur le `correlationId` déjà porté par chaque événement
+  (pas d'OpenTelemetry). Branchement gateway : `GET /metrics` (scope `read`),
+  bus enveloppé dans le `MeteredEventBus`, et services de cycle de vie
+  `AuditService` / `AlertService`.
 
 Tous les modules de la feuille de route (M0 → M14) sont livrés.

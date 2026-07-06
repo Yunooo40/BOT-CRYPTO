@@ -54,3 +54,11 @@ export const METRICS = Symbol("METRICS");
 
 /** `AuditSink` port — Postgres in production, in-memory in tests. */
 export const AUDIT_SINK = Symbol("AUDIT_SINK");
+
+/**
+ * `NotificationDispatcher` (from `@bot/notify-core`) that fired alerts are
+ * sent through. Has a Telegram notifier when `TELEGRAM_BOT_TOKEN` /
+ * `TELEGRAM_ALERT_CHAT_ID` are configured, otherwise no notifiers — dispatch
+ * is then a safe no-op and alerting stays log-only.
+ */
+export const NOTIFICATION_DISPATCHER = Symbol("NOTIFICATION_DISPATCHER");
