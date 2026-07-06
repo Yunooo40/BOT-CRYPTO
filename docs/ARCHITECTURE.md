@@ -79,14 +79,14 @@ suivant. Chaque module est autonome.
 | M1  | Domain & Events | Types du domaine, contrat d'événements, bus Redis typé ✅      |
 | M2  | RPC Manager     | Pool de RPC, rotation, health checks, failover ✅              |
 | M3  | DEX Adapters    | Abstraction Uniswap V2/V3, Aerodrome — quotes, calldata ✅     |
-| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅        |
-| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅     |
-| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                      |
-| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅        |
-| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                            |
+| M4  | Wallet Service  | Génération/import, chiffrement AES-256-GCM, signature ✅       |
+| M5  | Scanner         | Détection temps réel : nouveaux tokens, pools, liquidité ✅    |
+| M6  | Rugpull Shield  | 11 détecteurs, score de risque expliqué ✅                     |
+| M7  | Trading Engine  | Sniping, achat/vente, auto-sell, retry, paper trading ✅       |
+| M8  | Strategies      | Limit, TP, SL, trailing stop, DCA ✅                           |
 | M9  | Copy Trading    | Suivi ≤ 50 wallets, copie %, slippage, listes ✅               |
-| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅            |
-| M11 | Notifications   | Telegram, Discord, webhook, email ✅                            |
+| M10 | AI Service      | Moteur multi-provider (OpenAI/Gemini/Claude/Grok) ✅           |
+| M11 | Notifications   | Telegram, Discord, webhook, email ✅                           |
 | M12 | API Gateway     | REST + WebSocket, JWT, API keys, permissions, rate limiting ✅ |
 | M13 | Dashboard       | Next.js — PnL, ROI, positions, historique, analytics           |
 | M14 | Observabilité   | Métriques, traces, audit trail, alerting                       |
