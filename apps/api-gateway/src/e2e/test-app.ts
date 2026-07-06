@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { loadEnv, type Env } from "@bot/config";
 import { PoolNotFoundError } from "@bot/dex-adapters";
 import { poolSchema, toAddress } from "@bot/domain";
+import { InMemoryPositionStore, type PositionStore } from "@bot/engine-core";
 import { InMemoryEventBus } from "@bot/events";
 import { createLogger } from "@bot/logger";
 import { RpcInfraError } from "@bot/rpc-manager";
@@ -10,6 +11,7 @@ import { WsAdapter } from "@nestjs/platform-ws";
 import { Test } from "@nestjs/testing";
 import { AppModule } from "../app.module";
 import { InMemoryApiKeyRepository, InMemoryUserRepository } from "../auth/in-memory";
+import { InMemoryTradeHistoryRepository } from "../portfolio/in-memory";
 import { InMemoryRateLimitStore } from "../rate-limit/in-memory-store";
 import type { QuoteFinder } from "../quotes/quote-finder";
 import {
@@ -18,11 +20,13 @@ import {
   ENV,
   EVENT_BUS,
   LOGGER,
+  PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
   REDIS,
   RPC_POOL,
   STATUS_PROBES,
+  TRADE_HISTORY_REPOSITORY,
   USER_REPOSITORY,
 } from "../tokens";
 
@@ -73,6 +77,8 @@ export interface TestApp {
   bus: InMemoryEventBus;
   users: InMemoryUserRepository;
   apiKeys: InMemoryApiKeyRepository;
+  tradeHistory: InMemoryTradeHistoryRepository;
+  positions: PositionStore;
   env: Env;
 }
 
@@ -96,6 +102,8 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
   const bus = new InMemoryEventBus();
   const users = new InMemoryUserRepository();
   const apiKeys = new InMemoryApiKeyRepository();
+  const tradeHistory = new InMemoryTradeHistoryRepository();
+  const positions = new InMemoryPositionStore();
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(ENV)
@@ -121,6 +129,10 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
     .useValue(users)
     .overrideProvider(API_KEY_REPOSITORY)
     .useValue(apiKeys)
+    .overrideProvider(TRADE_HISTORY_REPOSITORY)
+    .useValue(tradeHistory)
+    .overrideProvider(PORTFOLIO_POSITIONS)
+    .useValue(positions)
     .overrideProvider(RATE_LIMIT_STORE)
     .useValue(new InMemoryRateLimitStore())
     .overrideProvider(QUOTE_FINDER)
@@ -132,5 +144,5 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
   const app = moduleRef.createNestApplication({ logger: false });
   app.useWebSocketAdapter(new WsAdapter(app));
   await app.init(); // runs AdminBootstrap: the admin user exists after this
-  return { app, bus, users, apiKeys, env };
+  return { app, bus, users, apiKeys, tradeHistory, positions, env };
 }

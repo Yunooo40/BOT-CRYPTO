@@ -1,5 +1,7 @@
+import { toAddress, type Address, type ChainId } from "@bot/domain";
+import type { PositionRecord, PositionStore } from "@bot/engine-core";
 import { InfraError } from "@bot/errors";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { DuplicateApiKeyError, DuplicateEmailError } from "../errors";
 import type {
   ApiKeyRecord,
@@ -9,8 +11,16 @@ import type {
   UserRecord,
   UserRepository,
 } from "../auth/repositories";
+import {
+  decodeCursor,
+  encodeCursor,
+  type TradeHistoryPage,
+  type TradeHistoryQuery,
+  type TradeHistoryRecord,
+  type TradeHistoryRepository,
+} from "../portfolio/trade-history";
 import type { Database } from "./client";
-import { apiKeys, users } from "./schema";
+import { apiKeys, portfolioPositions, tradeHistory, users } from "./schema";
 
 /** Postgres unique_violation — the driver error hides down the cause chain. */
 function isUniqueViolation(error: unknown): boolean {
@@ -135,6 +145,172 @@ export class PostgresApiKeyRepository implements ApiKeyRepository {
       await this.db.update(apiKeys).set({ lastUsedAt: at }).where(eq(apiKeys.id, id));
     } catch (error) {
       wrapDbError(error, "apiKeys.touchLastUsed");
+    }
+  }
+}
+
+type TradeHistoryRow = typeof tradeHistory.$inferSelect;
+
+function toTradeHistoryRecord(row: TradeHistoryRow): TradeHistoryRecord {
+  return {
+    id: row.id,
+    chainId: row.chainId as ChainId,
+    side: row.side,
+    token: toAddress(row.token),
+    amountIn: { raw: row.amountIn, decimals: row.amountInDecimals },
+    amountOut: { raw: row.amountOut, decimals: row.amountOutDecimals },
+    txHash: row.txHash,
+    simulated: row.simulated,
+    occurredAt: row.occurredAt,
+  };
+}
+
+export class DrizzleTradeHistoryRepository implements TradeHistoryRepository {
+  constructor(private readonly db: Database) {}
+
+  async append(record: TradeHistoryRecord): Promise<void> {
+    try {
+      await this.db
+        .insert(tradeHistory)
+        .values({
+          id: record.id,
+          chainId: record.chainId,
+          side: record.side,
+          token: record.token,
+          amountIn: record.amountIn.raw,
+          amountInDecimals: record.amountIn.decimals,
+          amountOut: record.amountOut.raw,
+          amountOutDecimals: record.amountOut.decimals,
+          txHash: record.txHash,
+          simulated: record.simulated,
+          occurredAt: record.occurredAt,
+        })
+        .onConflictDoNothing({ target: tradeHistory.id });
+    } catch (error) {
+      wrapDbError(error, "tradeHistory.append");
+    }
+  }
+
+  async list(query: TradeHistoryQuery): Promise<TradeHistoryPage> {
+    try {
+      const cursor = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
+      const beforeCursor =
+        cursor === undefined
+          ? undefined
+          : or(
+              lt(tradeHistory.occurredAt, cursor.occurredAt),
+              and(eq(tradeHistory.occurredAt, cursor.occurredAt), lt(tradeHistory.id, cursor.id)),
+            );
+      const rows = await this.db
+        .select()
+        .from(tradeHistory)
+        .where(beforeCursor)
+        .orderBy(desc(tradeHistory.occurredAt), desc(tradeHistory.id))
+        .limit(query.limit + 1);
+      const hasMore = rows.length > query.limit;
+      const page = hasMore ? rows.slice(0, query.limit) : rows;
+      const last = page[page.length - 1];
+      return {
+        items: page.map(toTradeHistoryRecord),
+        ...(hasMore && last !== undefined
+          ? { nextCursor: encodeCursor({ occurredAt: last.occurredAt, id: last.id }) }
+          : {}),
+      };
+    } catch (error) {
+      wrapDbError(error, "tradeHistory.list");
+    }
+  }
+
+  async listAll(): Promise<TradeHistoryRecord[]> {
+    try {
+      const rows = await this.db.select().from(tradeHistory).orderBy(tradeHistory.occurredAt);
+      return rows.map(toTradeHistoryRecord);
+    } catch (error) {
+      wrapDbError(error, "tradeHistory.listAll");
+    }
+  }
+}
+
+type PortfolioPositionRow = typeof portfolioPositions.$inferSelect;
+
+function toPositionRecord(row: PortfolioPositionRow): PositionRecord {
+  return {
+    id: row.id,
+    chainId: row.chainId as ChainId,
+    token: toAddress(row.token),
+    simulated: row.simulated,
+    amount: row.amount,
+    costBasis: row.costBasis,
+    realizedPnl: row.realizedPnl,
+    openedAt: row.openedAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * The gateway's own position book (M13), folded from `trade.executed` via
+ * `@bot/engine-core`'s `applyTrade` — see `db/schema.ts` for why this is a
+ * separate table from the Trading Engine's.
+ */
+export class DrizzlePortfolioPositionsRepository implements PositionStore {
+  constructor(private readonly db: Database) {}
+
+  async get(
+    chainId: ChainId,
+    token: Address,
+    simulated: boolean,
+  ): Promise<PositionRecord | undefined> {
+    try {
+      const rows = await this.db
+        .select()
+        .from(portfolioPositions)
+        .where(
+          and(
+            eq(portfolioPositions.chainId, chainId),
+            eq(portfolioPositions.token, token),
+            eq(portfolioPositions.simulated, simulated),
+          ),
+        )
+        .limit(1);
+      return rows[0] === undefined ? undefined : toPositionRecord(rows[0]);
+    } catch (error) {
+      wrapDbError(error, "portfolioPositions.get");
+    }
+  }
+
+  async upsert(record: PositionRecord): Promise<void> {
+    try {
+      await this.db
+        .insert(portfolioPositions)
+        .values(record)
+        .onConflictDoUpdate({
+          target: portfolioPositions.id,
+          set: {
+            amount: record.amount,
+            costBasis: record.costBasis,
+            realizedPnl: record.realizedPnl,
+            updatedAt: record.updatedAt,
+          },
+        });
+    } catch (error) {
+      wrapDbError(error, "portfolioPositions.upsert");
+    }
+  }
+
+  async remove(id: string): Promise<void> {
+    try {
+      await this.db.delete(portfolioPositions).where(eq(portfolioPositions.id, id));
+    } catch (error) {
+      wrapDbError(error, "portfolioPositions.remove");
+    }
+  }
+
+  async list(): Promise<PositionRecord[]> {
+    try {
+      const rows = await this.db.select().from(portfolioPositions);
+      return rows.map(toPositionRecord);
+    } catch (error) {
+      wrapDbError(error, "portfolioPositions.list");
     }
   }
 }

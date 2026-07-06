@@ -1,10 +1,17 @@
 import { fileURLToPath } from "node:url";
+import { toAddress } from "@bot/domain";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { generateApiKey } from "../auth/api-key";
 import { DuplicateEmailError } from "../errors";
+import type { TradeHistoryRecord } from "../portfolio/trade-history";
 import { createDatabase, type DatabaseHandle } from "./client";
-import { PostgresApiKeyRepository, PostgresUserRepository } from "./postgres-repositories";
+import {
+  DrizzlePortfolioPositionsRepository,
+  DrizzleTradeHistoryRepository,
+  PostgresApiKeyRepository,
+  PostgresUserRepository,
+} from "./postgres-repositories";
 
 const DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://botcrypto:botcrypto@localhost:5432/botcrypto";
@@ -135,5 +142,91 @@ describe.runIf(available)("Postgres repositories (integration)", () => {
     });
     await handle.pool.query("DELETE FROM users WHERE id = $1", [owner.id]);
     await expect(apiKeys.findByHash(generated.keyHash)).resolves.toBeUndefined();
+  });
+});
+
+const PEPE = toAddress("0x1111111111111111111111111111111111111111");
+
+describe.runIf(available)("Portfolio repositories (integration)", () => {
+  let handle: DatabaseHandle;
+  let history: DrizzleTradeHistoryRepository;
+  let positions: DrizzlePortfolioPositionsRepository;
+
+  beforeAll(async () => {
+    handle = createDatabase(DATABASE_URL);
+    await migrate(handle.db, {
+      migrationsFolder: fileURLToPath(new URL("../../drizzle", import.meta.url)),
+    });
+    history = new DrizzleTradeHistoryRepository(handle.db);
+    positions = new DrizzlePortfolioPositionsRepository(handle.db);
+  });
+
+  beforeEach(async () => {
+    await handle.pool.query("DELETE FROM trade_history; DELETE FROM portfolio_positions;");
+  });
+
+  afterAll(async () => {
+    await handle.pool.end();
+  });
+
+  function record(id: string, occurredAt: number): TradeHistoryRecord {
+    return {
+      id,
+      chainId: 8453,
+      side: "buy",
+      token: PEPE,
+      amountIn: { raw: 1_000_000_000_000_000_000n, decimals: 18 },
+      amountOut: { raw: 1_000_000n, decimals: 18 },
+      txHash: `0x${id
+        .repeat(64)
+        .slice(0, 64)
+        .replace(/[^0-9a-f]/gi, "0")}`,
+      simulated: false,
+      occurredAt,
+    };
+  }
+
+  it("appends idempotently and paginates newest-first", async () => {
+    await history.append(record("t1", 1_000));
+    await history.append(record("t2", 2_000));
+    await history.append(record("t1", 1_000)); // redelivery, no-op
+
+    const all = await history.listAll();
+    expect(all.map((r) => r.id)).toEqual(["t1", "t2"]);
+
+    const page1 = await history.list({ limit: 1 });
+    expect(page1.items.map((r) => r.id)).toEqual(["t2"]);
+    expect(page1.nextCursor).toBeDefined();
+
+    const page2 = await history.list({ limit: 1, cursor: page1.nextCursor });
+    expect(page2.items.map((r) => r.id)).toEqual(["t1"]);
+    expect(page2.nextCursor).toBeUndefined();
+  });
+
+  it("round-trips a position through get/upsert/remove", async () => {
+    const base = {
+      id: "8453:0x1111111111111111111111111111111111111111:live",
+      chainId: 8453 as const,
+      token: PEPE,
+      simulated: false,
+      amount: 1_000_000n,
+      costBasis: 1_000_000_000_000_000_000n,
+      realizedPnl: 0n,
+      openedAt: 1_000,
+      updatedAt: 1_000,
+    };
+    await positions.upsert(base);
+    await expect(positions.get(8453, PEPE, false)).resolves.toMatchObject({
+      amount: 1_000_000n,
+      costBasis: 1_000_000_000_000_000_000n,
+    });
+
+    await positions.upsert({ ...base, amount: 500_000n, updatedAt: 2_000 });
+    await expect(positions.list()).resolves.toEqual([
+      expect.objectContaining({ amount: 500_000n }),
+    ]);
+
+    await positions.remove(base.id);
+    await expect(positions.get(8453, PEPE, false)).resolves.toBeUndefined();
   });
 });

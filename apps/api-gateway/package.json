@@ -16,6 +16,7 @@
     "@bot/config": "workspace:*",
     "@bot/dex-adapters": "workspace:*",
     "@bot/domain": "workspace:*",
+    "@bot/engine-core": "workspace:*",
     "@bot/errors": "workspace:*",
     "@bot/events": "workspace:*",
     "@bot/logger": "workspace:*",

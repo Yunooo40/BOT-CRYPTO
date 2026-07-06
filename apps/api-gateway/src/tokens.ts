@@ -42,3 +42,9 @@ export const REDIS = Symbol("REDIS");
 
 /** `DatabaseHandle` — drizzle instance + its pg pool. */
 export const DATABASE = Symbol("DATABASE");
+
+/** `TradeHistoryRepository` — the gateway's own trade log (M13 read-model). */
+export const TRADE_HISTORY_REPOSITORY = Symbol("TRADE_HISTORY_REPOSITORY");
+
+/** `PositionStore` (from `@bot/engine-core`) backing the gateway's own position book. */
+export const PORTFOLIO_POSITIONS = Symbol("PORTFOLIO_POSITIONS");
