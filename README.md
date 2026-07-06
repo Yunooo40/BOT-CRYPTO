@@ -3,8 +3,10 @@
 Plateforme de trading de memecoins EVM (chaîne de lancement : **Base**), full
 TypeScript, pensée comme un produit professionnel modulaire et maintenable.
 
-> 🚧 En construction, module par module. État actuel : **M0-M3** livrés + **M12 — API
-> Gateway** (avancé hors séquence sur décision explicite) ; prochaine brique : M4.
+> 🚧 En construction, module par module. État actuel : **M0 → M12 livrés**
+> (M12 — API Gateway a été avancé hors séquence sur décision explicite, puis
+> M4 → M11 livrés dans l'ordre) ; prochaine brique : **M13 — Dashboard**.
+> Détail par module : voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Fonctionnalités visées
 
