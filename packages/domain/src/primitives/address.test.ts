@@ -21,4 +21,11 @@ describe("isAddress", () => {
     expect(isAddress(42)).toBe(false);
     expect(isAddress(null)).toBe(false);
   });
+
+  it("rejects a non-normalized (checksummed) address, since an Address is lowercase", () => {
+    const checksummed = "0xAbC0000000000000000000000000000000000001";
+    // Well-formed shape, but not yet normalized — must go through toAddress first.
+    expect(isAddress(checksummed)).toBe(false);
+    expect(isAddress(toAddress(checksummed))).toBe(true);
+  });
 });

@@ -103,4 +103,49 @@ describe.skipIf(!available)("RedisEventBus (integration)", () => {
     await unsubscribe();
     await bus.close();
   });
+
+  it("acks and drops an unparseable (poison) message instead of retrying it forever", async () => {
+    const key = `${prefix}pool.created`;
+    const bus = new RedisEventBus({ redis, keyPrefix: prefix, blockMs: 200 });
+    const received: string[] = [];
+
+    const unsubscribe = await bus.subscribe(
+      "pool.created",
+      (event) => {
+        received.push(event.payload.pool.address);
+      },
+      { group: "svc-poison" },
+    );
+
+    // Inject a message the schema can never parse, straight onto the stream.
+    await redis.xadd(key, "*", "data", "{not valid json");
+
+    // A well-formed event published afterwards must still be delivered — proof the
+    // poison pill was acked and dropped rather than wedging the consumer.
+    await bus.publish(
+      createEvent(
+        "pool.created",
+        {
+          pool: {
+            chainId: 8453,
+            address: TOKEN,
+            dex: "aerodrome",
+            token0: TOKEN,
+            token1: TOKEN,
+          },
+        },
+        { source: "scanner" },
+      ),
+    );
+
+    await waitFor(() => received.length === 1, 3000);
+    expect(received).toEqual([TOKEN]);
+
+    // Nothing left pending: the poison message was acked, not parked.
+    const pending = (await redis.xpending(key, "svc-poison")) as unknown[];
+    expect(pending[0]).toBe(0);
+
+    await unsubscribe();
+    await bus.close();
+  });
 });

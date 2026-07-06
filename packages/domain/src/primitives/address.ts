@@ -29,7 +29,14 @@ export function toAddress(value: string): Address {
   return result.data;
 }
 
-/** Type guard: true when `value` has the shape of an EVM address. */
+/**
+ * Type guard for a value that is already a normalized {@link Address}.
+ *
+ * Deliberately strict: an `Address` is lowercase by construction (see above), so
+ * a checksummed/mixed-case string like `0xAbC…` is *not* one — it would fail a
+ * `===` against its canonical form. Use {@link toAddress} to normalize first;
+ * this guard only confirms a value is safe to treat as an `Address`.
+ */
 export function isAddress(value: unknown): value is Address {
-  return typeof value === "string" && ADDRESS_REGEX.test(value);
+  return typeof value === "string" && ADDRESS_REGEX.test(value) && value === value.toLowerCase();
 }

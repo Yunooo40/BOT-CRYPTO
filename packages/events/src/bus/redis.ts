@@ -197,8 +197,25 @@ export class RedisEventBus implements EventBus {
       await connection.xack(key, group, id);
       return;
     }
+
+    // A message that can't be parsed is a poison pill: retrying it would redeliver
+    // it forever and wedge the group. It's not a transient handler failure, so ack
+    // and drop it (logged) rather than leaving it pending.
+    let event: EventOf<T>;
     try {
-      const event = deserializeEvent(data) as EventOf<T>;
+      event = deserializeEvent(data) as EventOf<T>;
+    } catch (error) {
+      this.#logger.error(
+        { err: error, key, id },
+        "unparseable event; acking and dropping poison message",
+      );
+      await connection.xack(key, group, id);
+      return;
+    }
+
+    // A handler failure, by contrast, is assumed transient: leave the message
+    // pending so it is redelivered (handlers must be idempotent).
+    try {
       await handler(event);
       await connection.xack(key, group, id);
     } catch (error) {
