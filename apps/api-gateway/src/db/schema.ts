@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -89,3 +90,29 @@ export const portfolioPositions = pgTable("portfolio_positions", {
   openedAt: bigint("opened_at", { mode: "number" }).notNull(),
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });
+
+/**
+ * Append-only audit trail (M14), one row per money-moving action, built by the
+ * observability core's `Auditor` off the bus. `id` is the source event id, so a
+ * redelivered event is a no-op insert (`onConflictDoNothing`). `user_id` is a
+ * plain string, not a FK: the referenced owner lives in another service's slice.
+ * `detail` never holds a secret — the mappers only copy non-sensitive fields.
+ */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: text("id").primaryKey(),
+    action: text("action").notNull(),
+    occurredAt: bigint("occurred_at", { mode: "number" }).notNull(),
+    correlationId: text("correlation_id").notNull(),
+    userId: text("user_id"),
+    source: text("source").notNull(),
+    outcome: text("outcome", { enum: ["success", "failure"] }).notNull(),
+    subject: text("subject"),
+    detail: jsonb("detail").notNull().$type<Record<string, string | number | boolean>>(),
+  },
+  (table) => [
+    index("audit_log_occurred_at_idx").on(table.occurredAt),
+    index("audit_log_correlation_id_idx").on(table.correlationId),
+  ],
+);

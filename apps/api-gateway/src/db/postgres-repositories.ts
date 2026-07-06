@@ -1,6 +1,7 @@
 import { toAddress, type Address, type ChainId } from "@bot/domain";
 import type { PositionRecord, PositionStore } from "@bot/engine-core";
 import { InfraError } from "@bot/errors";
+import type { AuditRecord, AuditSink } from "@bot/observability-core";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 import { DuplicateApiKeyError, DuplicateEmailError } from "../errors";
 import type {
@@ -20,7 +21,7 @@ import {
   type TradeHistoryRepository,
 } from "../portfolio/trade-history";
 import type { Database } from "./client";
-import { apiKeys, portfolioPositions, tradeHistory, users } from "./schema";
+import { apiKeys, auditLog, portfolioPositions, tradeHistory, users } from "./schema";
 
 /** Postgres unique_violation — the driver error hides down the cause chain. */
 function isUniqueViolation(error: unknown): boolean {
@@ -311,6 +312,35 @@ export class DrizzlePortfolioPositionsRepository implements PositionStore {
       return rows.map(toPositionRecord);
     } catch (error) {
       wrapDbError(error, "portfolioPositions.list");
+    }
+  }
+}
+
+/**
+ * Append-only audit sink (M14). Idempotent on the source event id — a
+ * redelivered event is a no-op insert, not a duplicate row.
+ */
+export class PostgresAuditSink implements AuditSink {
+  constructor(private readonly db: Database) {}
+
+  async record(record: AuditRecord): Promise<void> {
+    try {
+      await this.db
+        .insert(auditLog)
+        .values({
+          id: record.id,
+          action: record.action,
+          occurredAt: record.occurredAt,
+          correlationId: record.correlationId,
+          userId: record.userId,
+          source: record.source,
+          outcome: record.outcome,
+          subject: record.subject,
+          detail: record.detail,
+        })
+        .onConflictDoNothing({ target: auditLog.id });
+    } catch (error) {
+      wrapDbError(error, "auditLog.record");
     }
   }
 }
