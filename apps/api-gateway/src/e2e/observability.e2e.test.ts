@@ -19,6 +19,25 @@ function buyTrade(id: string): Trade {
   };
 }
 
+function failedTrade() {
+  return createEvent(
+    "trade.failed",
+    {
+      intent: {
+        chainId: 8453,
+        side: "sell",
+        token: WETH,
+        amountIn: tokenAmount(1n, 18),
+        maxSlippageBps: 100,
+        simulated: true,
+      },
+      reason: "slippage exceeded",
+      retryable: false,
+    },
+    { source: "engine" },
+  );
+}
+
 describe("observability e2e", () => {
   let testApp: TestApp;
   let server: ReturnType<TestApp["app"]["getHttpServer"]>;
@@ -72,5 +91,19 @@ describe("observability e2e", () => {
       .set("Authorization", `Bearer ${adminToken}`);
     expect(metrics.text).toContain('bot_events_published_total{type="trade.executed"} 1');
     expect(metrics.text).toContain('bot_events_consumed_total{type="trade.executed"}');
+  });
+
+  it("pages the Telegram channel when a threshold rule fires", async () => {
+    // The default rule fires at 3 "trade.failed" within its window.
+    await testApp.bus.publish(failedTrade());
+    await testApp.bus.publish(failedTrade());
+    expect(testApp.telegramMessages).toHaveLength(0); // below threshold
+    await testApp.bus.publish(failedTrade());
+
+    expect(testApp.telegramMessages).toHaveLength(1);
+    const message = testApp.telegramMessages[0]!;
+    expect(message.severity).toBe("critical");
+    expect(message.title).toBe("Trade failures spiking");
+    expect(message.dedupeKey).toBe("trade-failure-spike");
   });
 });

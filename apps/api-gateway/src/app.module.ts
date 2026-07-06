@@ -2,6 +2,12 @@ import { loadEnv, type Env } from "@bot/config";
 import { createDexAdapters } from "@bot/dex-adapters";
 import { RedisEventBus, type EventBus } from "@bot/events";
 import { createLogger, type Logger } from "@bot/logger";
+import {
+  fetchHttpClient,
+  NotificationDispatcher,
+  TelegramNotifier,
+  type Notifier,
+} from "@bot/notify-core";
 import { MeteredEventBus, MetricRegistry } from "@bot/observability-core";
 import { rpcEndpointsFromEnv, RpcPool } from "@bot/rpc-manager";
 import { Module } from "@nestjs/common";
@@ -46,6 +52,7 @@ import {
   EVENT_BUS,
   LOGGER,
   METRICS,
+  NOTIFICATION_DISPATCHER,
   PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
@@ -85,6 +92,25 @@ import { EventsGateway } from "./ws/events.gateway";
     },
     { provide: CLOCK, useValue: (): number => Date.now() },
     { provide: METRICS, useFactory: (): MetricRegistry => new MetricRegistry() },
+    {
+      // Telegram only when both variables are configured; otherwise zero
+      // notifiers, so `dispatch()` is a safe no-op and alerting stays log-only.
+      provide: NOTIFICATION_DISPATCHER,
+      useFactory: (env: Env, logger: Logger): NotificationDispatcher => {
+        const notifiers: Notifier[] = [];
+        if (env.TELEGRAM_BOT_TOKEN !== undefined && env.TELEGRAM_ALERT_CHAT_ID !== undefined) {
+          notifiers.push(
+            new TelegramNotifier({
+              http: fetchHttpClient,
+              botToken: env.TELEGRAM_BOT_TOKEN,
+              chatId: env.TELEGRAM_ALERT_CHAT_ID,
+            }),
+          );
+        }
+        return new NotificationDispatcher({ notifiers, logger });
+      },
+      inject: [ENV, LOGGER],
+    },
     {
       provide: RPC_POOL,
       useFactory: (env: Env, logger: Logger): RpcPool =>

@@ -1,15 +1,17 @@
 import type { EventBus, Unsubscribe } from "@bot/events";
 import type { Logger } from "@bot/logger";
-import { AlertEngine, type Alert } from "@bot/observability-core";
+import type { NotificationDispatcher } from "@bot/notify-core";
+import { alertToNotification, AlertEngine, type Alert } from "@bot/observability-core";
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import { EVENT_BUS, LOGGER } from "../tokens";
+import { EVENT_BUS, LOGGER, NOTIFICATION_DISPATCHER } from "../tokens";
 
 /**
  * Watches the bus for failure signals (`trade.failed`, danger verdicts) and
- * fires the observability core's threshold rules. The default channel is a
- * structured log line — log-based alerting works out of the box and needs no
- * external tokens; swap `dispatch` for a `@bot/notify-core` dispatcher (with
- * `alertToNotification`) to page Telegram/Discord when channels are configured.
+ * fires the observability core's threshold rules. Every fired alert is always
+ * logged (a structured line, so alerting never depends on an external
+ * service being reachable) and also handed to the injected
+ * `NotificationDispatcher` — a no-op when no channel is configured, a real
+ * Telegram page once `TELEGRAM_BOT_TOKEN`/`TELEGRAM_ALERT_CHAT_ID` are set.
  */
 @Injectable()
 export class AlertService implements OnModuleInit, OnModuleDestroy {
@@ -19,6 +21,7 @@ export class AlertService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(EVENT_BUS) private readonly bus: EventBus,
     @Inject(LOGGER) private readonly logger: Logger,
+    @Inject(NOTIFICATION_DISPATCHER) private readonly dispatcher: NotificationDispatcher,
   ) {
     this.#engine = new AlertEngine({ dispatch: (alert) => this.#emit(alert), logger });
   }
@@ -38,13 +41,15 @@ export class AlertService implements OnModuleInit, OnModuleDestroy {
     this.#unsubscribes.length = 0;
   }
 
-  #emit(alert: Alert): Promise<void> {
+  async #emit(alert: Alert): Promise<void> {
     const line = { alert: alert.rule, count: alert.count, windowMs: alert.windowMs };
     if (alert.severity === "critical") {
       this.logger.error(line, alert.title);
     } else {
       this.logger.warn(line, alert.title);
     }
-    return Promise.resolve();
+    // The dispatcher never throws (per-channel failures are logged and
+    // swallowed internally) and is a safe no-op with zero notifiers.
+    await this.dispatcher.dispatch(alertToNotification(alert));
   }
 }

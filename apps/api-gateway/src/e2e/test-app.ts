@@ -5,6 +5,7 @@ import { poolSchema, toAddress } from "@bot/domain";
 import { InMemoryPositionStore, type PositionStore } from "@bot/engine-core";
 import { InMemoryEventBus, type EventBus } from "@bot/events";
 import { createLogger } from "@bot/logger";
+import { NotificationDispatcher, type Notifier, type NotificationMessage } from "@bot/notify-core";
 import { InMemoryAuditSink, MeteredEventBus, MetricRegistry } from "@bot/observability-core";
 import { RpcInfraError } from "@bot/rpc-manager";
 import type { INestApplication } from "@nestjs/common";
@@ -23,6 +24,7 @@ import {
   EVENT_BUS,
   LOGGER,
   METRICS,
+  NOTIFICATION_DISPATCHER,
   PORTFOLIO_POSITIONS,
   QUOTE_FINDER,
   RATE_LIMIT_STORE,
@@ -80,6 +82,8 @@ export interface TestApp {
   bus: EventBus;
   metrics: MetricRegistry;
   auditSink: InMemoryAuditSink;
+  /** Messages the fake Telegram notifier would have sent, in order. */
+  telegramMessages: NotificationMessage[];
   users: InMemoryUserRepository;
   apiKeys: InMemoryApiKeyRepository;
   tradeHistory: InMemoryTradeHistoryRepository;
@@ -106,6 +110,19 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
 
   const metrics = new MetricRegistry();
   const auditSink = new InMemoryAuditSink();
+  const telegramMessages: NotificationMessage[] = [];
+  // A "telegram" notifier that records instead of calling the real Bot API —
+  // proves AlertService actually dispatches through notify-core, no network.
+  const fakeTelegram: Notifier = {
+    channel: "telegram",
+    async send(message) {
+      telegramMessages.push(message);
+    },
+  };
+  const notificationDispatcher = new NotificationDispatcher({
+    notifiers: [fakeTelegram],
+    logger: createLogger({ level: "fatal" }),
+  });
   // Same metered wrapper as production, over an in-memory bus: publishing through
   // it exercises the /metrics counters and drives the Auditor into `auditSink`.
   const bus = new MeteredEventBus(new InMemoryEventBus(), metrics);
@@ -138,6 +155,8 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
     .useValue(metrics)
     .overrideProvider(AUDIT_SINK)
     .useValue(auditSink)
+    .overrideProvider(NOTIFICATION_DISPATCHER)
+    .useValue(notificationDispatcher)
     .overrideProvider(USER_REPOSITORY)
     .useValue(users)
     .overrideProvider(API_KEY_REPOSITORY)
@@ -157,5 +176,16 @@ export async function createTestApp(envOverrides: NodeJS.ProcessEnv = {}): Promi
   const app = moduleRef.createNestApplication({ logger: false });
   app.useWebSocketAdapter(new WsAdapter(app));
   await app.init(); // runs AdminBootstrap: the admin user exists after this
-  return { app, bus, metrics, auditSink, users, apiKeys, tradeHistory, positions, env };
+  return {
+    app,
+    bus,
+    metrics,
+    auditSink,
+    telegramMessages,
+    users,
+    apiKeys,
+    tradeHistory,
+    positions,
+    env,
+  };
 }
