@@ -41,21 +41,32 @@ puis JWT ou clé API (`POST /v1/api-keys`) en `Authorization: Bearer …`.
 Routes : `/health`, `/v1/status`, `/metrics` (Prometheus, scope `read`),
 `/v1/quotes`, `/v1/api-keys`, WebSocket `/ws` (flux d'événements du bus par topics).
 
+### Worker
+
+```bash
+pnpm build                                        # construit dist/
+node --env-file=.env apps/worker/dist/main.js     # scanner + snipe + engine paper
+```
+
+Paper trading uniquement (aucune clé, aucune écriture on-chain). Détail et
+limites connues : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#appsworker--assemblage-runtime-hors-numérotation-m0-m14).
+
 ## Structure
 
 Monorepo pnpm + Turborepo.
 
-| Chemin                  | Rôle                                                              |
-| ----------------------- | ----------------------------------------------------------------- |
-| `packages/config`       | `@bot/config` — env typé et validé (fail-fast au boot)            |
-| `packages/logger`       | `@bot/logger` — logs structurés, secrets redactés                 |
-| `packages/errors`       | `@bot/errors` — hiérarchie d'erreurs classifiables                |
-| `packages/domain`       | `@bot/domain` — value objects et entités du domaine               |
-| `packages/events`       | `@bot/events` — contrat d'événements + bus Redis typé             |
-| `packages/rpc-manager`  | `@bot/rpc-manager` — pool RPC : failover, health checks           |
-| `packages/dex-adapters` | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata |
-| `apps/api-gateway`      | point d'entrée REST + WebSocket : auth, clés API, rate limiting   |
-| `docs/`                 | architecture et décisions                                         |
+| Chemin                  | Rôle                                                                  |
+| ----------------------- | --------------------------------------------------------------------- |
+| `packages/config`       | `@bot/config` — env typé et validé (fail-fast au boot)                |
+| `packages/logger`       | `@bot/logger` — logs structurés, secrets redactés                     |
+| `packages/errors`       | `@bot/errors` — hiérarchie d'erreurs classifiables                    |
+| `packages/domain`       | `@bot/domain` — value objects et entités du domaine                   |
+| `packages/events`       | `@bot/events` — contrat d'événements + bus Redis typé                 |
+| `packages/rpc-manager`  | `@bot/rpc-manager` — pool RPC : failover, health checks               |
+| `packages/dex-adapters` | `@bot/dex-adapters` — Uniswap V2/V3, Aerodrome : quotes, calldata     |
+| `apps/api-gateway`      | point d'entrée REST + WebSocket : auth, clés API, rate limiting       |
+| `apps/worker`           | process trading : scanner → snipe → engine (paper), voir architecture |
+| `docs/`                 | architecture et décisions                                             |
 
 ## Licence
 

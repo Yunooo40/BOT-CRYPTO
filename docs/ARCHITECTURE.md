@@ -201,3 +201,27 @@ suivant. Chaque module est autonome.
   `AuditService` / `AlertService`.
 
 Tous les modules de la feuille de route (M0 → M14) sont livrés.
+
+## apps/worker — assemblage runtime (hors numérotation M0-M14)
+
+`apps/worker` n'est pas un module de la feuille de route : c'est le process
+déployable qui câble les packages livrés (M2, M3, M5, M6, M7, M8) en une boucle
+de trading réelle, sur le même modèle qu'`apps/api-gateway` (M12) pour la
+gateway ou `apps/dashboard` (M13) pour le dashboard.
+
+Câblé aujourd'hui : `Scanner` (M5, détection `token.detected`/`pool.created`)
+→ `attachSniper` (arme une règle `snipe` one-shot par token détecté, jamais
+WETH lui-même, idempotent) → `StrategyRunner` (M8) → `TradingEngine` (M7) avec
+`ShieldAnalyzer.assessQuick` (M6) en pré-trade gate et `PaperExecutor` en
+exécuteur — **paper trading uniquement, aucune clé, aucune écriture on-chain**.
+Config via env : `WORKER_SNIPE_QUOTE_WEI`, `WORKER_MAX_SLIPPAGE_BPS`,
+`WORKER_TICK_MS`, `WORKER_SCAN_POLL_MS`. Seed de démo (`WORKER_SEED=true`,
+off par défaut) arme un snipe WETH/USDC au boot pour valider la boucle sans
+attendre un vrai listing.
+
+Limites connues, à lever avant un usage en production :
+
+- Une seule stratégie câblée (`snipe`) — TP/SL/trailing/DCA existent dans
+  `@bot/strategies-core` (M8) mais ne sont pas encore branchées ici.
+- `PaperExecutor` uniquement : le passage en exécution réelle nécessite un
+  exécuteur signant via `@bot/wallet-core` (M4), derrière un flag explicite.
