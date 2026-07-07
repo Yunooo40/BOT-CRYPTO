@@ -121,9 +121,7 @@ async function main(): Promise<void> {
 
   // --- Wire the bus: detection → snipe rule, and buy/sell.requested → engine ---
   const unsubs: Unsubscribe[] = [];
-  unsubs.push(
-    await attachSniper({ bus, store, registry, quoteAmount, maxSlippageBps, logger }),
-  );
+  unsubs.push(await attachSniper({ bus, store, registry, quoteAmount, maxSlippageBps, logger }));
   unsubs.push(
     await attachEngine({
       bus,
