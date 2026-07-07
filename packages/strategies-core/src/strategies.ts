@@ -3,6 +3,7 @@ import type { Strategy, StrategyAction, StrategyContext } from "./ports";
 import type {
   DcaParams,
   LimitParams,
+  SnipeParams,
   StopLossParams,
   StrategyRule,
   TakeProfitParams,
@@ -147,6 +148,33 @@ export const dcaStrategy: Strategy = {
   },
 };
 
+/**
+ * #6 — Snipe: an entry strategy for fresh pools. Emits a single buy the first
+ * time the pool is seen with a live price, marks itself sniped, and moves to
+ * `triggered` — it never rebuys. Idempotent via both state (`sniped`) and
+ * status, so a stray re-evaluation can't fire a second buy. Honeypot/rug
+ * pre-filtering is handled upstream by the Shield at wiring time; the only
+ * guard enforced here is that the pool must be live (a missing price means no
+ * liquidity to trade against yet).
+ */
+export const snipeStrategy: Strategy = {
+  type: "snipe",
+  evaluate(ctx: StrategyContext): StrategyAction[] {
+    const params = ctx.rule.params as SnipeParams;
+    // Already sniped (state or status) — never rebuy.
+    if (ctx.rule.state.sniped || ctx.rule.status !== "active") return [];
+    // Already holding this token — don't double-enter.
+    if (ctx.positionAmount > 0n) return [];
+    // Pool not live yet: no price = nothing to buy against. Wait for the next tick.
+    if (ctx.price === undefined) return [];
+    return [
+      { kind: "emit", intent: buyIntent(ctx.rule, params.quoteAmount, params.maxSlippageBps) },
+      { kind: "state", state: { ...ctx.rule.state, sniped: true } },
+      { kind: "status", status: "triggered" },
+    ];
+  },
+};
+
 function sellFractionActions(
   ctx: StrategyContext,
   fractionBps: number,
@@ -164,11 +192,16 @@ function minBig(a: bigint, b: bigint): bigint {
   return a < b ? a : b;
 }
 
-/** The five strategies, keyed by type. */
+/** The six strategies, keyed by type. */
 export function defaultStrategies(): Map<StrategyRule["type"], Strategy> {
   return new Map(
-    [limitStrategy, takeProfitStrategy, stopLossStrategy, trailingStopStrategy, dcaStrategy].map(
-      (strategy) => [strategy.type, strategy],
-    ),
+    [
+      limitStrategy,
+      takeProfitStrategy,
+      stopLossStrategy,
+      trailingStopStrategy,
+      dcaStrategy,
+      snipeStrategy,
+    ].map((strategy) => [strategy.type, strategy]),
   );
 }
