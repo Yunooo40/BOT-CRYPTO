@@ -5,12 +5,7 @@ export const PRICE_SCALE = 10n ** 18n;
 export type Price = bigint;
 
 export type StrategyType =
-  | "limit"
-  | "take-profit"
-  | "stop-loss"
-  | "trailing-stop"
-  | "dca"
-  | "snipe";
+  "limit" | "take-profit" | "stop-loss" | "trailing-stop" | "dca" | "snipe";
 export type StrategyStatus = "active" | "triggered" | "done" | "cancelled";
 
 /**
@@ -34,12 +29,7 @@ export interface StrategyRule {
 }
 
 export type StrategyParams =
-  | LimitParams
-  | TakeProfitParams
-  | StopLossParams
-  | TrailingStopParams
-  | DcaParams
-  | SnipeParams;
+  LimitParams | TakeProfitParams | StopLossParams | TrailingStopParams | DcaParams | SnipeParams;
 
 /** Buy or sell when price crosses `triggerPrice` in `direction`. */
 export interface LimitParams {
