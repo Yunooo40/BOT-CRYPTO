@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -61,10 +62,15 @@ export const tradeHistory = pgTable(
     chainId: integer("chain_id").notNull(),
     side: text("side", { enum: ["buy", "sell"] }).notNull(),
     token: text("token").notNull(),
-    /** Base units + decimals: a buy's `amountIn` is the quote asset, a sell's `amountOut` is. */
-    amountIn: bigint("amount_in", { mode: "bigint" }).notNull(),
+    /**
+     * Base units + decimals: a buy's `amountIn` is the quote asset, a sell's
+     * `amountOut` is. `numeric` (not `bigint`): a token's base-unit amount at 18
+     * decimals routinely exceeds int64 (e.g. a cheap memecoin snipe), so an
+     * int64 column would reject the insert.
+     */
+    amountIn: numeric("amount_in", { mode: "bigint" }).notNull(),
     amountInDecimals: integer("amount_in_decimals").notNull(),
-    amountOut: bigint("amount_out", { mode: "bigint" }).notNull(),
+    amountOut: numeric("amount_out", { mode: "bigint" }).notNull(),
     amountOutDecimals: integer("amount_out_decimals").notNull(),
     txHash: text("tx_hash").notNull(),
     simulated: boolean("simulated").notNull(),
@@ -84,9 +90,10 @@ export const portfolioPositions = pgTable("portfolio_positions", {
   chainId: integer("chain_id").notNull(),
   token: text("token").notNull(),
   simulated: boolean("simulated").notNull(),
-  amount: bigint("amount", { mode: "bigint" }).notNull(),
-  costBasis: bigint("cost_basis", { mode: "bigint" }).notNull(),
-  realizedPnl: bigint("realized_pnl", { mode: "bigint" }).notNull(),
+  // `numeric`, not `bigint`: token base-unit amounts at 18 decimals exceed int64.
+  amount: numeric("amount", { mode: "bigint" }).notNull(),
+  costBasis: numeric("cost_basis", { mode: "bigint" }).notNull(),
+  realizedPnl: numeric("realized_pnl", { mode: "bigint" }).notNull(),
   openedAt: bigint("opened_at", { mode: "number" }).notNull(),
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });
