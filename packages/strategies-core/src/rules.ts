@@ -4,7 +4,13 @@ import type { Address, ChainId, Pool } from "@bot/domain";
 export const PRICE_SCALE = 10n ** 18n;
 export type Price = bigint;
 
-export type StrategyType = "limit" | "take-profit" | "stop-loss" | "trailing-stop" | "dca";
+export type StrategyType =
+  | "limit"
+  | "take-profit"
+  | "stop-loss"
+  | "trailing-stop"
+  | "dca"
+  | "snipe";
 export type StrategyStatus = "active" | "triggered" | "done" | "cancelled";
 
 /**
@@ -28,7 +34,12 @@ export interface StrategyRule {
 }
 
 export type StrategyParams =
-  LimitParams | TakeProfitParams | StopLossParams | TrailingStopParams | DcaParams;
+  | LimitParams
+  | TakeProfitParams
+  | StopLossParams
+  | TrailingStopParams
+  | DcaParams
+  | SnipeParams;
 
 /** Buy or sell when price crosses `triggerPrice` in `direction`. */
 export interface LimitParams {
@@ -77,9 +88,29 @@ export interface DcaParams {
   maxSlippageBps: number;
 }
 
+/**
+ * Snipe: buy once, the first time the pool is seen live, then never again.
+ * An entry strategy for fresh pools. Honeypot/rug pre-filtering is the Shield's
+ * job upstream at wiring time — it is not repeated here. `minLiquidity` and
+ * `maxBuyTaxBps` are guard-rail config carried on the rule so it is
+ * self-describing; the Shield enforces them before the buy is wired.
+ */
+export interface SnipeParams {
+  kind: "snipe";
+  /** Quote base units to spend on the single snipe buy. */
+  quoteAmount: bigint;
+  maxSlippageBps: number;
+  /** Guard-rail: don't snipe unless the pool is at least this deep (quote base units). */
+  minLiquidity?: bigint;
+  /** Guard-rail: don't snipe if the token's buy tax exceeds this. */
+  maxBuyTaxBps?: number;
+}
+
 export interface StrategyState {
   /** Trailing stop: highest price seen so far. */
   highWaterMark?: Price;
+  /** Snipe: set once the single entry buy has been emitted — never rebuy. */
+  sniped?: boolean;
   /** DCA: number of tranches already bought. */
   dcaCount?: number;
   /** DCA: earliest time (epoch ms) the next tranche may fire. */

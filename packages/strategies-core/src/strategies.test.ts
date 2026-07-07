@@ -3,6 +3,7 @@ import type { StrategyAction, StrategyContext } from "./ports";
 import {
   dcaStrategy,
   limitStrategy,
+  snipeStrategy,
   stopLossStrategy,
   takeProfitStrategy,
   trailingStopStrategy,
@@ -168,5 +169,49 @@ describe("dca strategy", () => {
     const actions = dcaStrategy.evaluate(ctx(finished, undefined, 0n, 999_999));
     expect(emitted(actions)).toBeUndefined();
     expect(statusOf(actions)).toBe("done");
+  });
+});
+
+describe("snipe strategy", () => {
+  const r = rule("snipe", {
+    kind: "snipe",
+    quoteAmount: 2_000n,
+    maxSlippageBps: 300,
+    minLiquidity: 1_000n,
+    maxBuyTaxBps: 500,
+  });
+
+  it("emits a single buy the first time the pool is live", () => {
+    const actions = snipeStrategy.evaluate(ctx(r, P(1), 0n));
+    const emit = emitted(actions);
+    expect(emit?.kind === "emit" && emit.intent.side).toBe("buy");
+    expect(emit?.kind === "emit" && emit.intent.amountIn.raw).toBe(2_000n);
+    expect(emit?.kind === "emit" && emit.intent.maxSlippageBps).toBe(300);
+    // Exactly one emit, ever.
+    expect(actions.filter((a) => a.kind === "emit")).toHaveLength(1);
+  });
+
+  it("marks itself sniped and moves to triggered", () => {
+    const actions = snipeStrategy.evaluate(ctx(r, P(1), 0n));
+    expect(stateOf(actions)?.sniped).toBe(true);
+    expect(statusOf(actions)).toBe("triggered");
+  });
+
+  it("never rebuys once sniped (state guard)", () => {
+    const sniped = rule("snipe", r.params, { state: { sniped: true } });
+    expect(snipeStrategy.evaluate(ctx(sniped, P(1.5), 0n))).toEqual([]);
+  });
+
+  it("never rebuys once triggered (status guard)", () => {
+    const triggered = rule("snipe", r.params, { status: "triggered" });
+    expect(snipeStrategy.evaluate(ctx(triggered, P(1.5), 0n))).toEqual([]);
+  });
+
+  it("waits while the pool is not live yet (no price = no liquidity)", () => {
+    expect(snipeStrategy.evaluate(ctx(r, undefined, 0n))).toEqual([]);
+  });
+
+  it("does not double-enter when already holding the token", () => {
+    expect(snipeStrategy.evaluate(ctx(r, P(1), 5_000n))).toEqual([]);
   });
 });
