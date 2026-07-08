@@ -56,7 +56,7 @@ async function main(): Promise<void> {
   const maxSlippageBps = intEnv("WORKER_MAX_SLIPPAGE_BPS", 500);
   const tickMs = intEnv("WORKER_TICK_MS", 2_000);
   const scanPollMs = intEnv("WORKER_SCAN_POLL_MS", 1_500);
-  const seedEnabled = (process.env.WORKER_SEED ?? "true").toLowerCase() !== "false";
+  const seedEnabled = (process.env.WORKER_SEED ?? "false").toLowerCase() === "true";
 
   // --- Engine (paper): quote-only, no key, no chain writes ---
   const adapters = createDexAdapters(client as ChainReader);
@@ -132,7 +132,8 @@ async function main(): Promise<void> {
   );
 
   // --- Optional demo seed: arm a WETH/USDC snipe so a paper trade fires within
-  // seconds, without waiting to catch a real launch. Off with WORKER_SEED=false.
+  // seconds, without waiting to catch a real launch. Off by default; opt in
+  // with WORKER_SEED=true for local/demo runs only, never in a real deployment.
   if (seedEnabled) {
     try {
       const v3 = adapters.get("uniswap-v3");
