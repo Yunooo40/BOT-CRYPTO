@@ -29,9 +29,13 @@ export interface SnipeRuleInput {
   quoteAmount: bigint;
   maxSlippageBps: number;
   at: number;
+  /** Wallet the buy executes against. Default `"paper"` (no real key). */
+  walletId?: string;
+  /** Paper vs live book. Default `true` (paper). Must be `false` for live. */
+  simulated?: boolean;
 }
 
-/** Build a paper `snipe` rule for a token — one-shot buy, never rebuys. */
+/** Build a `snipe` rule for a token — one-shot buy, never rebuys. */
 export function buildSnipeRule(input: SnipeRuleInput): StrategyRule {
   const id = `snipe:${input.token.toLowerCase()}`;
   return {
@@ -40,8 +44,8 @@ export function buildSnipeRule(input: SnipeRuleInput): StrategyRule {
     chainId: input.chainId,
     token: input.token,
     pool: input.pool,
-    walletId: "paper",
-    simulated: true,
+    walletId: input.walletId ?? "paper",
+    simulated: input.simulated ?? true,
     status: "active",
     params: {
       kind: "snipe",
@@ -61,6 +65,10 @@ export interface SniperOptions {
   /** WETH (quote) base units to spend on each snipe. */
   quoteAmount: bigint;
   maxSlippageBps: number;
+  /** Wallet the snipe buys execute against. Default `"paper"`. */
+  walletId?: string;
+  /** Paper vs live book. Default `true` (paper). Must be `false` for live. */
+  simulated?: boolean;
   now?: () => number;
   logger?: Logger;
   group?: string;
@@ -95,6 +103,8 @@ export async function attachSniper(options: SniperOptions): Promise<Unsubscribe>
         quoteAmount: options.quoteAmount,
         maxSlippageBps: options.maxSlippageBps,
         at: now(),
+        walletId: options.walletId,
+        simulated: options.simulated,
       }),
     );
     logger.info(

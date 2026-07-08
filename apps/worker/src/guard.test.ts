@@ -1,0 +1,79 @@
+import { toAddress, tokenAmount, type Pool, type Trade, type TradeIntent } from "@bot/domain";
+import type { ExecuteRequest, Executor } from "@bot/engine-core";
+import { getAddress } from "viem";
+import { describe, expect, it, vi } from "vitest";
+import { NotionalCapExceededError, withNotionalCap } from "./guard.js";
+
+const CHAIN_ID = 8453;
+const TOKEN = toAddress(getAddress("0x1111111111111111111111111111111111111111"));
+const POOL_ADDR = toAddress(getAddress("0x2222222222222222222222222222222222222222"));
+const TX_HASH = `0x${"22".repeat(32)}` as const;
+
+function pool(): Pool {
+  return {
+    chainId: CHAIN_ID,
+    address: POOL_ADDR,
+    dex: "uniswap-v3",
+    token0: TOKEN,
+    token1: TOKEN,
+    feeTier: 3000,
+  };
+}
+
+function intent(side: "buy" | "sell", amountIn: bigint): TradeIntent {
+  return {
+    chainId: CHAIN_ID,
+    side,
+    token: TOKEN,
+    amountIn: tokenAmount(amountIn, 0),
+    maxSlippageBps: 500,
+    simulated: false,
+  };
+}
+
+function request(side: "buy" | "sell", amountIn: bigint): ExecuteRequest {
+  return { intent: intent(side, amountIn), pool: pool(), intentId: "intent-1" };
+}
+
+function fakeExecutor(): Executor {
+  const trade: Trade = {
+    id: "intent-1",
+    chainId: CHAIN_ID,
+    side: "buy",
+    token: TOKEN,
+    amountIn: tokenAmount(100n, 0),
+    amountOut: tokenAmount(1n, 0),
+    txHash: TX_HASH,
+    simulated: false,
+  };
+  return { mode: "live", execute: vi.fn().mockResolvedValue(trade) };
+}
+
+describe("withNotionalCap", () => {
+  it("passes a buy at or under the cap through to the inner executor", async () => {
+    const inner = fakeExecutor();
+    const capped = withNotionalCap(inner, 100n);
+    await capped.execute(request("buy", 100n));
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a buy over the cap with a terminal DomainError, without executing", async () => {
+    const inner = fakeExecutor();
+    const capped = withNotionalCap(inner, 50n);
+    await expect(capped.execute(request("buy", 51n))).rejects.toBeInstanceOf(
+      NotionalCapExceededError,
+    );
+    expect(inner.execute).not.toHaveBeenCalled();
+  });
+
+  it("does not cap sells — a sell's amountIn is the token, not the quote", async () => {
+    const inner = fakeExecutor();
+    const capped = withNotionalCap(inner, 50n);
+    await capped.execute(request("sell", 1_000n));
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the inner executor's mode", () => {
+    expect(withNotionalCap(fakeExecutor(), 1n).mode).toBe("live");
+  });
+});

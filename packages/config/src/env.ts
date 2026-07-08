@@ -56,6 +56,16 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   /** Chat/channel id `sendMessage` targets for fired alerts. */
   TELEGRAM_ALERT_CHAT_ID: z.string().min(1).optional(),
+
+  // --- Wallet (M4) ---
+
+  /**
+   * Master passphrase the Wallet Service derives its key-encryption key from
+   * (scrypt + AES-256-GCM envelopes). Optional so paper-only services boot
+   * without it; the worker requires it before it will run in live mode.
+   * 16+ chars — the Keystore refuses anything shorter.
+   */
+  WALLET_MASTER_KEY: z.string().min(16).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
