@@ -205,6 +205,9 @@ importers:
       '@bot/strategies-core':
         specifier: workspace:*
         version: link:../../packages/strategies-core
+      '@bot/wallet-core':
+        specifier: workspace:*
+        version: link:../../packages/wallet-core
       ioredis:
         specifier: ^5.4.1
         version: 5.11.1
