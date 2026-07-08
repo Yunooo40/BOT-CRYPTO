@@ -35,29 +35,29 @@ Scanner ──token.detected──▶ Sniper ──upsert snipe rule──▶ St
 
 Live refuses to start unless **all** of these are set:
 
-| Var | Meaning |
-| --- | --- |
-| `WORKER_MODE=live` | Select live execution. |
-| `WORKER_LIVE_CONFIRM=I_UNDERSTAND` | Explicit confirmation — a stray env var can't go live. |
-| `WORKER_WALLET_ID=<uuid>` | Wallet Service id whose key signs (must already exist). |
-| `WORKER_MAX_NOTIONAL_WEI=<n>` | Max quote base units a single buy may spend. |
-| `WALLET_MASTER_KEY=<16+ chars>` | Master key the keystore decrypts with. |
+| Var                                | Meaning                                                 |
+| ---------------------------------- | ------------------------------------------------------- |
+| `WORKER_MODE=live`                 | Select live execution.                                  |
+| `WORKER_LIVE_CONFIRM=I_UNDERSTAND` | Explicit confirmation — a stray env var can't go live.  |
+| `WORKER_WALLET_ID=<uuid>`          | Wallet Service id whose key signs (must already exist). |
+| `WORKER_MAX_NOTIONAL_WEI=<n>`      | Max quote base units a single buy may spend.            |
+| `WALLET_MASTER_KEY=<16+ chars>`    | Master key the keystore decrypts with.                  |
 
 A buy over the cap fails as a terminal error (no retry) and never executes.
 
 ## Config
 
-| Var | Default | Meaning |
-| --- | --- | --- |
-| `WORKER_SNIPE_QUOTE_WEI` | `1e15` (0.001 WETH) | Quote spent per snipe buy. |
-| `WORKER_MAX_SLIPPAGE_BPS` | `500` | Slippage tolerated on snipe buys. |
-| `WORKER_TICK_MS` | `2000` | Strategy runner tick period. |
-| `WORKER_SCAN_POLL_MS` | `1500` | Scanner poll interval. |
-| `EXIT_TP_GAIN_BPS` | `5000` | Take-profit trigger (+50%). |
-| `EXIT_SL_LOSS_BPS` | `3000` | Stop-loss trigger (−30%). |
-| `EXIT_SELL_FRACTION_BPS` | `10000` | Fraction each exit sells (all). |
-| `EXIT_MAX_SLIPPAGE_BPS` | = `WORKER_MAX_SLIPPAGE_BPS` | Slippage on exit sells. |
-| `WORKER_SEED` | `false` | Demo only: arm a WETH/USDC snipe at boot. Never in prod. |
+| Var                       | Default                     | Meaning                                                  |
+| ------------------------- | --------------------------- | -------------------------------------------------------- |
+| `WORKER_SNIPE_QUOTE_WEI`  | `1e15` (0.001 WETH)         | Quote spent per snipe buy.                               |
+| `WORKER_MAX_SLIPPAGE_BPS` | `500`                       | Slippage tolerated on snipe buys.                        |
+| `WORKER_TICK_MS`          | `2000`                      | Strategy runner tick period.                             |
+| `WORKER_SCAN_POLL_MS`     | `1500`                      | Scanner poll interval.                                   |
+| `EXIT_TP_GAIN_BPS`        | `5000`                      | Take-profit trigger (+50%).                              |
+| `EXIT_SL_LOSS_BPS`        | `3000`                      | Stop-loss trigger (−30%).                                |
+| `EXIT_SELL_FRACTION_BPS`  | `10000`                     | Fraction each exit sells (all).                          |
+| `EXIT_MAX_SLIPPAGE_BPS`   | = `WORKER_MAX_SLIPPAGE_BPS` | Slippage on exit sells.                                  |
+| `WORKER_SEED`             | `false`                     | Demo only: arm a WETH/USDC snipe at boot. Never in prod. |
 
 ## Out of scope (this pass)
 
