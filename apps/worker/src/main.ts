@@ -248,6 +248,7 @@ async function main(): Promise<void> {
     seen: scanState,
     logger,
     pollIntervalMs: scanPollMs,
+    maxBlockRange: intEnv("WORKER_SCAN_MAX_BLOCK_RANGE", 500),
   });
 
   // --- Wire the bus: detection → snipe rule, buy/sell.requested → engine,
