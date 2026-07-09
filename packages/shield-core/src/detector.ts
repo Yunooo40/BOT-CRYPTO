@@ -30,7 +30,14 @@ export interface DetectorContext {
 export interface Detector {
   readonly name: string;
   readonly weight: number;
-  /** True for the cheap detectors that make up the fast pre-trade gate. */
+  /**
+   * True for the detectors that make up the pre-trade gate (`assessQuick`).
+   * The gate covers the rug-defining signals — liquidity, LP lock, honeypot,
+   * taxes, plus the cheap bytecode/ownership checks — so it must never buy
+   * blind. Kept fast by running in parallel under a bounded gate timeout and
+   * caching per token; the full `assess()` adds the remaining, slower-signal
+   * detectors (e.g. supply concentration) for the async deep analysis.
+   */
   readonly fast: boolean;
   detect(ctx: DetectorContext): Promise<Omit<RiskFactor, "detector" | "weight">>;
 }
