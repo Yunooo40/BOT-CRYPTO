@@ -35,7 +35,7 @@ import { DrizzleWalletRepository, WalletService } from "@bot/wallet-core";
 import { Redis } from "ioredis";
 import type { PublicClient } from "viem";
 import { attachExitArmer, type ExitConfig } from "./exits.js";
-import { withNotionalCap } from "./guard.js";
+import { withNotionalCap, withPortfolioLimits, type PortfolioLimits } from "./guard.js";
 import { WalletServiceSigner, type SignerClient } from "./signer.js";
 import { attachSniper, buildSnipeRule, PoolRegistry } from "./sniper.js";
 
@@ -185,6 +185,15 @@ async function main(): Promise<void> {
   const { executor, positions, strategyStore, walletId, simulated, cleanups } =
     await setupExecution({ mode, env, router, client, chainId, logger });
 
+  // --- Portfolio risk ceilings: bound how many positions and how much total
+  // quote the sniper can have open at once, so a burst of fresh pools can't open
+  // unbounded exposure. Enforced before every buy, paper and live alike. ---
+  const portfolioLimits: PortfolioLimits = {
+    maxOpenPositions: intEnv("WORKER_MAX_OPEN_POSITIONS", 5),
+    maxTotalNotionalWei: bigintEnv("WORKER_MAX_TOTAL_NOTIONAL_WEI", 0n),
+  };
+  const guardedExecutor = withPortfolioLimits(executor, positions, portfolioLimits);
+
   // --- Rugpull Shield: fast pre-trade gate (honeypot, mint, ownership, taxes,
   // LP lock, ...). A "danger" verdict rejects the buy before it ever executes,
   // paper or live — see TradingEngine.trade(). Quick mode only: cheap detectors
@@ -192,7 +201,7 @@ async function main(): Promise<void> {
   const shield = new ShieldAnalyzer({ client: client as ShieldClient, logger, chainId });
 
   const engine = new TradingEngine({
-    executor,
+    executor: guardedExecutor,
     positions,
     logger,
     preTradeCheck: async (intent, pool) => {
@@ -325,6 +334,10 @@ async function main(): Promise<void> {
       tickMs,
       seedEnabled,
       exit: exitConfig,
+      portfolio: {
+        maxOpenPositions: portfolioLimits.maxOpenPositions,
+        maxTotalNotionalWei: portfolioLimits.maxTotalNotionalWei.toString(),
+      },
     },
     "worker started — scanner + snipe strategy + TP/SL exits + engine",
   );
