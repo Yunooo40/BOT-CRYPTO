@@ -6,7 +6,7 @@ import {
   createDexAdapters,
   type ChainReader,
 } from "@bot/dex-adapters";
-import { SUPPORTED_CHAINS, type ChainId } from "@bot/domain";
+import { SUPPORTED_CHAINS, type ChainId, type RiskVerdict } from "@bot/domain";
 import {
   AdapterRouter,
   attachEngine,
@@ -66,6 +66,19 @@ function resolveMode(): WorkerMode {
   const raw = (process.env.WORKER_MODE ?? "paper").toLowerCase();
   if (raw !== "paper" && raw !== "live") {
     throw new Error(`WORKER_MODE must be "paper" or "live", got "${raw}"`);
+  }
+  return raw;
+}
+
+/**
+ * Lowest Shield verdict that blocks a buy. Defaults to `"caution"` — the grey
+ * zone (score 30–60) is rejected, not just outright `"danger"` — so a mid-risk
+ * token isn't bought blindly. Loosen to `"danger"` to trade the grey zone.
+ */
+function resolveShieldBlock(): RiskVerdict {
+  const raw = (process.env.WORKER_SHIELD_BLOCK ?? "caution").toLowerCase();
+  if (raw !== "safe" && raw !== "caution" && raw !== "danger") {
+    throw new Error(`WORKER_SHIELD_BLOCK must be "safe", "caution" or "danger", got "${raw}"`);
   }
   return raw;
 }
@@ -195,15 +208,18 @@ async function main(): Promise<void> {
   const guardedExecutor = withPortfolioLimits(executor, positions, portfolioLimits);
 
   // --- Rugpull Shield: fast pre-trade gate (honeypot, mint, ownership, taxes,
-  // LP lock, ...). A "danger" verdict rejects the buy before it ever executes,
-  // paper or live — see TradingEngine.trade(). Quick mode only: cheap detectors
-  // under a tight timeout, cached per token, sized for a sniper's hot path.
+  // LP lock, ...). A verdict at or above WORKER_SHIELD_BLOCK (default "caution")
+  // rejects the buy before it ever executes, paper or live — see
+  // TradingEngine.trade(). Quick mode only: cheap detectors under a tight
+  // timeout, cached per token, sized for a sniper's hot path.
   const shield = new ShieldAnalyzer({ client: client as ShieldClient, logger, chainId });
+  const shieldBlock = resolveShieldBlock();
 
   const engine = new TradingEngine({
     executor: guardedExecutor,
     positions,
     logger,
+    rejectAtOrAbove: shieldBlock,
     preTradeCheck: async (intent, pool) => {
       const risk = await shield.assessQuick({
         token: intent.token,
@@ -336,6 +352,7 @@ async function main(): Promise<void> {
       maxSlippageBps,
       tickMs,
       seedEnabled,
+      shieldBlock,
       exit: exitConfig,
       portfolio: {
         maxOpenPositions: portfolioLimits.maxOpenPositions,

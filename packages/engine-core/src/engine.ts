@@ -1,4 +1,4 @@
-import type { Pool, RiskScore, Trade, TradeIntent } from "@bot/domain";
+import type { Pool, RiskScore, RiskVerdict, Trade, TradeIntent } from "@bot/domain";
 import { InfraError } from "@bot/errors";
 import { createLogger, type Logger } from "@bot/logger";
 import type { Executor, PositionRecord, PositionStore } from "./ports";
@@ -7,16 +7,24 @@ import { applyTrade } from "./positions";
 /** Optional pre-trade gate — e.g. the Shield's quick assessment on a buy. */
 export type PreTradeCheck = (intent: TradeIntent, pool: Pool) => Promise<RiskScore | undefined>;
 
+/** Severity ordering of Shield verdicts, least → most dangerous. */
+const VERDICT_SEVERITY: Record<RiskVerdict, number> = { safe: 0, caution: 1, danger: 2 };
+
 export interface TradingEngineOptions {
   executor: Executor;
   positions: PositionStore;
   logger?: Logger;
   /**
-   * Optional gate run before a buy. Returning a `danger` verdict aborts the
-   * trade. Left unset by default so the engine core doesn't hard-couple to the
-   * Shield — the app wires it in.
+   * Optional gate run before a buy. A verdict at or above `rejectAtOrAbove`
+   * aborts the trade. Left unset by default so the engine core doesn't
+   * hard-couple to the Shield — the app wires it in.
    */
   preTradeCheck?: PreTradeCheck;
+  /**
+   * Lowest Shield verdict that rejects a buy. Default `"danger"` (reject only
+   * outright-dangerous tokens); set `"caution"` to also reject the grey zone.
+   */
+  rejectAtOrAbove?: RiskVerdict;
   /** Retryable-error attempts (total tries = retries + 1). Default 3. */
   maxRetries?: number;
   /** Base backoff between retries, doubled each attempt. Default 250 ms. */
@@ -47,6 +55,7 @@ export class TradingEngine {
   readonly #positions: PositionStore;
   readonly #logger: Logger;
   readonly #preTradeCheck: PreTradeCheck | undefined;
+  readonly #rejectSeverity: number;
   readonly #maxRetries: number;
   readonly #backoffMs: number;
   readonly #now: () => number;
@@ -58,6 +67,7 @@ export class TradingEngine {
     this.#positions = options.positions;
     this.#logger = options.logger ?? createLogger({ name: "engine" });
     this.#preTradeCheck = options.preTradeCheck;
+    this.#rejectSeverity = VERDICT_SEVERITY[options.rejectAtOrAbove ?? "danger"];
     this.#maxRetries = options.maxRetries ?? 3;
     this.#backoffMs = options.retryBackoffMs ?? 250;
     this.#now = options.now ?? Date.now;
@@ -76,10 +86,10 @@ export class TradingEngine {
 
     if (intent.side === "buy" && this.#preTradeCheck !== undefined) {
       const risk = await this.#preTradeCheck(intent, pool);
-      if (risk?.verdict === "danger") {
+      if (risk !== undefined && VERDICT_SEVERITY[risk.verdict] >= this.#rejectSeverity) {
         const result: TradeResult = {
           status: "rejected",
-          reason: `pre-trade risk gate: danger (score ${risk.score})`,
+          reason: `pre-trade risk gate: ${risk.verdict} (score ${risk.score})`,
           retryable: false,
         };
         this.#done.set(intentId, result);

@@ -97,6 +97,41 @@ describe("TradingEngine", () => {
     expect(executor.execute).not.toHaveBeenCalled();
   });
 
+  it("lets a caution verdict through by default (only danger blocks)", async () => {
+    const caution: RiskScore = { score: 45, verdict: "caution", factors: [] };
+    const executor = fakeExecutor(async () => settledTrade);
+    const engine = engineWith(executor, { preTradeCheck: async () => caution });
+    const result = await engine.trade(buyIntent(), pool, "caution-default");
+    expect(result.status).toBe("executed");
+    expect(executor.execute).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a caution verdict when rejectAtOrAbove is caution", async () => {
+    const caution: RiskScore = { score: 45, verdict: "caution", factors: [] };
+    const executor = fakeExecutor(async () => settledTrade);
+    const engine = engineWith(executor, {
+      preTradeCheck: async () => caution,
+      rejectAtOrAbove: "caution",
+    });
+    const result = await engine.trade(buyIntent(), pool, "caution-blocked");
+    expect(result).toMatchObject({
+      status: "rejected",
+      reason: expect.stringContaining("caution"),
+    });
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
+  it("still lets a safe verdict through when rejectAtOrAbove is caution", async () => {
+    const safe: RiskScore = { score: 10, verdict: "safe", factors: [] };
+    const executor = fakeExecutor(async () => settledTrade);
+    const engine = engineWith(executor, {
+      preTradeCheck: async () => safe,
+      rejectAtOrAbove: "caution",
+    });
+    const result = await engine.trade(buyIntent(), pool, "safe-through");
+    expect(result.status).toBe("executed");
+  });
+
   it("does not gate sells", async () => {
     const danger: RiskScore = { score: 80, verdict: "danger", factors: [] };
     const check = vi.fn(async () => danger);
