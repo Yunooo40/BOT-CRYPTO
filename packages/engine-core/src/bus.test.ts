@@ -1,6 +1,6 @@
 import { createEvent, InMemoryEventBus, type DomainEvent } from "@bot/events";
 import { createLogger } from "@bot/logger";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { attachEngine } from "./bus";
 import { TradingEngine } from "./engine";
 import { PaperExecutor } from "./paper-executor";
@@ -43,6 +43,16 @@ describe("attachEngine", () => {
     await bus.publish(createEvent("buy.requested", { intent: buyIntent() }, { source: "test" }));
     expect(failed).toHaveLength(1);
     expect(failed[0]?.payload).toMatchObject({ retryable: false });
+  });
+
+  it("logs a warning when no pool can be resolved, not just a silent failure", async () => {
+    const { bus, engine } = await harness(1n);
+    const warn = vi.fn();
+    const logger = { ...silent, warn };
+    await attachEngine({ bus, engine, logger, resolvePool: async () => undefined });
+    await bus.publish(createEvent("buy.requested", { intent: buyIntent() }, { source: "test" }));
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[1]).toContain("no pool");
   });
 
   it("uses the event id as the idempotency key", async () => {

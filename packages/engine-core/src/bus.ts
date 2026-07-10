@@ -37,6 +37,10 @@ export async function attachEngine(options: AttachEngineOptions): Promise<Unsubs
           { source: "engine", correlationId: event.correlationId },
         ),
       );
+      logger.warn(
+        { intentId: event.id, side: intent.side, token: intent.token },
+        "trade not executed: no pool to route it through",
+      );
       return;
     }
     const result = await engine.trade(intent, pool, event.id);
