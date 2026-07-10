@@ -11,7 +11,6 @@ import {
   AdapterRouter,
   attachEngine,
   DrizzlePositionStore,
-  InMemoryPositionStore,
   LiveExecutor,
   PaperExecutor,
   TradingEngine,
@@ -25,7 +24,6 @@ import { InMemoryScanState, Scanner } from "@bot/scanner-core";
 import { ShieldAnalyzer, type ShieldClient } from "@bot/shield-core";
 import {
   DrizzleStrategyStore,
-  InMemoryStrategyStore,
   QuotePriceSource,
   StrategyRunner,
   type PositionSource,
@@ -96,10 +94,12 @@ interface ExecutionSetup {
 }
 
 /**
- * Paper mode: quote-only execution, in-memory books, no key. Live mode: real
- * signatures via the Wallet Service behind a hard notional cap, and
- * Postgres-backed position/strategy books so a restart never drops an open
- * position or its stop-loss.
+ * Paper mode: quote-only execution, no key. Live mode: real signatures via the
+ * Wallet Service behind a hard notional cap. Both persist to the same
+ * Postgres-backed position/strategy books (paper rows carry `simulated: true`
+ * and stay on the `walletId: "paper"` book, so they never mix with live
+ * exposure) — a restart never drops an open position or its stop-loss, and the
+ * dashboard can show paper runs the same way it shows live ones.
  *
  * Live is gated on purpose — WORKER_MODE=live is not enough. It also demands an
  * explicit WORKER_LIVE_CONFIRM=I_UNDERSTAND, a wallet id, a master key and a
@@ -116,13 +116,15 @@ async function setupExecution(params: {
   const { mode, env, router, client, chainId, logger } = params;
 
   if (mode === "paper") {
+    const positions = DrizzlePositionStore.connect(env.DATABASE_URL);
+    const strategies = DrizzleStrategyStore.connect(env.DATABASE_URL);
     return {
       executor: new PaperExecutor({ router }),
-      positions: new InMemoryPositionStore(),
-      strategyStore: new InMemoryStrategyStore(),
+      positions: positions.store,
+      strategyStore: strategies.store,
       walletId: "paper",
       simulated: true,
-      cleanups: [],
+      cleanups: [positions.close, strategies.close],
     };
   }
 
