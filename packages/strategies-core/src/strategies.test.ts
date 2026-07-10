@@ -84,8 +84,14 @@ describe("take-profit strategy", () => {
     expect(statusOf(actions)).toBe("triggered");
   });
 
-  it("does nothing when flat", () => {
-    expect(takeProfitStrategy.evaluate(ctx(r, P(2), 0n))).toEqual([]);
+  it("retires (done) when the position is closed, so it stops polling", () => {
+    const actions = takeProfitStrategy.evaluate(ctx(r, P(2), 0n));
+    expect(emitted(actions)).toBeUndefined();
+    expect(statusOf(actions)).toBe("done");
+  });
+
+  it("retires even before the pool has a price once flat", () => {
+    expect(statusOf(takeProfitStrategy.evaluate(ctx(r, undefined, 0n)))).toBe("done");
   });
 });
 
@@ -106,6 +112,10 @@ describe("stop-loss strategy", () => {
     const actions = stopLossStrategy.evaluate(ctx(r, P(0.8), 1_000n));
     const emit = emitted(actions);
     expect(emit?.kind === "emit" && emit.intent.amountIn.raw).toBe(1_000n);
+  });
+
+  it("retires (done) once the position is closed — no orphan RPC polling", () => {
+    expect(statusOf(stopLossStrategy.evaluate(ctx(r, P(0.8), 0n)))).toBe("done");
   });
 });
 
@@ -133,6 +143,11 @@ describe("trailing-stop strategy", () => {
   it("holds when price is within the trailing band", () => {
     const withHigh = rule("trailing-stop", r.params, { state: { highWaterMark: P(2) } });
     expect(trailingStopStrategy.evaluate(ctx(withHigh, P(1.85), 1_000n))).toEqual([]);
+  });
+
+  it("retires (done) once the position is closed", () => {
+    const withHigh = rule("trailing-stop", r.params, { state: { highWaterMark: P(2) } });
+    expect(statusOf(trailingStopStrategy.evaluate(ctx(withHigh, P(1.79), 0n)))).toBe("done");
   });
 });
 
