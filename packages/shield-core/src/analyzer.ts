@@ -36,7 +36,13 @@ export interface ShieldAnalyzerOptions {
   chainId?: ChainId;
   /** Per-detector timeout. Default 2 500 ms (full) — the gate tightens it. */
   detectorTimeoutMs?: number;
-  /** Tighter per-detector timeout for the fast gate. Default 250 ms. */
+  /**
+   * Per-detector timeout for the pre-trade gate. Default 1 500 ms: the gate now
+   * includes RPC-backed detectors (liquidity, LP lock, honeypot, taxes) that
+   * run in parallel, so the ceiling must let a couple of reads complete while
+   * still bounding a stalled RPC. A detector that overruns becomes indeterminate
+   * (a cautious moderate score), never a false `safe`.
+   */
   fastDetectorTimeoutMs?: number;
   thresholds?: RiskThresholds;
   /** Quick-assessment cache TTL, keyed by token. Default 30 000 ms. */
@@ -112,7 +118,7 @@ export class ShieldAnalyzer {
     this.#logger = options.logger ?? createLogger({ name: "shield" });
     this.#chainId = options.chainId ?? SUPPORTED_CHAINS.base;
     this.#timeoutMs = options.detectorTimeoutMs ?? 2_500;
-    this.#fastTimeoutMs = options.fastDetectorTimeoutMs ?? 250;
+    this.#fastTimeoutMs = options.fastDetectorTimeoutMs ?? 1_500;
     this.#thresholds = options.thresholds ?? { safe: 30, caution: 60 };
     this.#cacheTtlMs = options.cacheTtlMs ?? 30_000;
     this.#now = options.now ?? Date.now;

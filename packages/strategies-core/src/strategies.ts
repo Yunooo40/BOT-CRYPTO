@@ -47,6 +47,15 @@ function sellFraction(positionAmount: bigint, fractionBps: number): bigint {
   return (positionAmount * BigInt(fractionBps)) / BPS;
 }
 
+/**
+ * Retire an exit rule whose position is gone: transition to `done` so it leaves
+ * the active set. Without this a sibling exit (the stop-loss left behind when
+ * the take-profit fires, or vice-versa) stays `active` forever and the runner
+ * keeps fetching a live price for it every tick — a growing RPC leak, one dead
+ * quote per closed position per tick.
+ */
+const retireClosedExit: StrategyAction[] = [{ kind: "status", status: "done" }];
+
 /** #1 — Limit: fire once when price crosses the trigger in the set direction. */
 export const limitStrategy: Strategy = {
   type: "limit",
@@ -75,7 +84,8 @@ export const takeProfitStrategy: Strategy = {
   type: "take-profit",
   evaluate(ctx: StrategyContext): StrategyAction[] {
     const params = ctx.rule.params as TakeProfitParams;
-    if (ctx.price === undefined || ctx.positionAmount === 0n) return [];
+    if (ctx.positionAmount === 0n) return retireClosedExit; // position closed — stop polling
+    if (ctx.price === undefined) return []; // pool not priced yet — wait
     const target = (params.entryPrice * (BPS + BigInt(params.gainBps))) / BPS;
     if (ctx.price < target) return [];
     return sellFractionActions(ctx, params.sellFractionBps, params.maxSlippageBps);
@@ -87,7 +97,8 @@ export const stopLossStrategy: Strategy = {
   type: "stop-loss",
   evaluate(ctx: StrategyContext): StrategyAction[] {
     const params = ctx.rule.params as StopLossParams;
-    if (ctx.price === undefined || ctx.positionAmount === 0n) return [];
+    if (ctx.positionAmount === 0n) return retireClosedExit; // position closed — stop polling
+    if (ctx.price === undefined) return []; // pool not priced yet — wait
     const floor = (params.entryPrice * (BPS - BigInt(params.lossBps))) / BPS;
     if (ctx.price > floor) return [];
     return sellFractionActions(ctx, params.sellFractionBps, params.maxSlippageBps);
@@ -103,7 +114,8 @@ export const trailingStopStrategy: Strategy = {
   type: "trailing-stop",
   evaluate(ctx: StrategyContext): StrategyAction[] {
     const params = ctx.rule.params as TrailingStopParams;
-    if (ctx.price === undefined || ctx.positionAmount === 0n) return [];
+    if (ctx.positionAmount === 0n) return retireClosedExit; // position closed — stop polling
+    if (ctx.price === undefined) return []; // pool not priced yet — wait
     const prevHigh = ctx.rule.state.highWaterMark ?? 0n;
     const high = ctx.price > prevHigh ? ctx.price : prevHigh;
     const stop = (high * (BPS - BigInt(params.trailingBps))) / BPS;

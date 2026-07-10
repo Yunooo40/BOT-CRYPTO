@@ -1,8 +1,20 @@
-import { toAddress, tokenAmount, type Pool, type Trade, type TradeIntent } from "@bot/domain";
-import type { ExecuteRequest, Executor } from "@bot/engine-core";
+import {
+  toAddress,
+  tokenAmount,
+  type Address,
+  type Pool,
+  type Trade,
+  type TradeIntent,
+} from "@bot/domain";
+import type { ExecuteRequest, Executor, PositionRecord, PositionStore } from "@bot/engine-core";
 import { getAddress } from "viem";
 import { describe, expect, it, vi } from "vitest";
-import { NotionalCapExceededError, withNotionalCap } from "./guard.js";
+import {
+  NotionalCapExceededError,
+  PortfolioLimitExceededError,
+  withNotionalCap,
+  withPortfolioLimits,
+} from "./guard.js";
 
 const CHAIN_ID = 8453;
 const TOKEN = toAddress(getAddress("0x1111111111111111111111111111111111111111"));
@@ -75,5 +87,114 @@ describe("withNotionalCap", () => {
 
   it("preserves the inner executor's mode", () => {
     expect(withNotionalCap(fakeExecutor(), 1n).mode).toBe("live");
+  });
+});
+
+function position(
+  token: Address,
+  amount: bigint,
+  costBasis: bigint,
+  simulated = false,
+): PositionRecord {
+  return {
+    id: `pos-${token}`,
+    chainId: CHAIN_ID,
+    token,
+    simulated,
+    amount,
+    costBasis,
+    realizedPnl: 0n,
+    openedAt: 0,
+    updatedAt: 0,
+  };
+}
+
+function fakeStore(records: PositionRecord[]): Pick<PositionStore, "list"> {
+  return { list: vi.fn().mockResolvedValue(records) };
+}
+
+function otherToken(n: number): Address {
+  return toAddress(getAddress(`0x${n.toString(16).padStart(40, "0")}`));
+}
+
+describe("withPortfolioLimits", () => {
+  const limits = { maxOpenPositions: 3, maxTotalNotionalWei: 0n };
+
+  it("passes a buy through when under the position cap", async () => {
+    const inner = fakeExecutor();
+    const guarded = withPortfolioLimits(
+      inner,
+      fakeStore([position(otherToken(9), 5n, 100n)]),
+      limits,
+    );
+    await guarded.execute(request("buy", 100n));
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a new position once the open-position cap is reached", async () => {
+    const inner = fakeExecutor();
+    const open = [otherToken(1), otherToken(2), otherToken(3)].map((t) => position(t, 5n, 100n));
+    const guarded = withPortfolioLimits(inner, fakeStore(open), limits);
+    await expect(guarded.execute(request("buy", 100n))).rejects.toBeInstanceOf(
+      PortfolioLimitExceededError,
+    );
+    expect(inner.execute).not.toHaveBeenCalled();
+  });
+
+  it("still allows adding to a token already held at the cap (no new slot)", async () => {
+    const inner = fakeExecutor();
+    // Three open, but one of them IS the intent's token → not a new position.
+    const open = [
+      position(TOKEN, 5n, 100n),
+      position(otherToken(2), 5n, 100n),
+      position(otherToken(3), 5n, 100n),
+    ];
+    const guarded = withPortfolioLimits(inner, fakeStore(open), limits);
+    await guarded.execute(request("buy", 100n));
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("rejects a buy that would breach the total-notional cap", async () => {
+    const inner = fakeExecutor();
+    const open = [position(otherToken(1), 5n, 900n)];
+    const guarded = withPortfolioLimits(inner, fakeStore(open), {
+      maxOpenPositions: 0,
+      maxTotalNotionalWei: 1_000n,
+    });
+    await expect(guarded.execute(request("buy", 101n))).rejects.toBeInstanceOf(
+      PortfolioLimitExceededError,
+    );
+    expect(inner.execute).not.toHaveBeenCalled();
+  });
+
+  it("counts only the matching book (paper vs live) toward the cap", async () => {
+    const inner = fakeExecutor();
+    // Three open positions but all simulated — a live buy sees an empty live book.
+    const open = [otherToken(1), otherToken(2), otherToken(3)].map((t) =>
+      position(t, 5n, 100n, true),
+    );
+    const guarded = withPortfolioLimits(inner, fakeStore(open), limits);
+    await guarded.execute(request("buy", 100n)); // request() builds a live (simulated:false) intent
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("does not gate sells", async () => {
+    const inner = fakeExecutor();
+    const open = [otherToken(1), otherToken(2), otherToken(3)].map((t) => position(t, 5n, 100n));
+    const guarded = withPortfolioLimits(inner, fakeStore(open), limits);
+    await guarded.execute(request("sell", 5n));
+    expect(inner.execute).toHaveBeenCalledOnce();
+  });
+
+  it("skips the store entirely when both limits are disabled", async () => {
+    const inner = fakeExecutor();
+    const store = fakeStore([]);
+    const guarded = withPortfolioLimits(inner, store, {
+      maxOpenPositions: 0,
+      maxTotalNotionalWei: 0n,
+    });
+    await guarded.execute(request("buy", 100n));
+    expect(store.list).not.toHaveBeenCalled();
+    expect(inner.execute).toHaveBeenCalledOnce();
   });
 });

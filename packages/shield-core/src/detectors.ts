@@ -41,7 +41,9 @@ async function totalSupply(client: ShieldClient, token: Address): Promise<bigint
 export const liquidityDetector: Detector = {
   name: "liquidity",
   weight: 0.15,
-  fast: false,
+  // In the gate: one balanceOf read. Whether real liquidity exists is a
+  // top-tier rug signal — never buy without it.
+  fast: true,
   async detect(ctx): Promise<Factor> {
     if (ctx.pool === undefined) {
       return { score: 50, detail: "no pool provided; liquidity not assessed" };
@@ -60,7 +62,9 @@ export const liquidityDetector: Detector = {
 export const lpSecurityDetector: Detector = {
   name: "lp-security",
   weight: 0.15,
-  fast: false,
+  // In the gate: the single strongest anti-rug signal (is the LP locked/burned).
+  // Reads run in parallel so it stays fast enough for the pre-trade path.
+  fast: true,
   async detect(ctx): Promise<Factor> {
     if (ctx.pool === undefined) {
       return { score: 50, detail: "no pool provided; LP security not assessed" };
@@ -77,10 +81,8 @@ export const lpSecurityDetector: Detector = {
       return { score: 60, detail: "no LP supply yet" };
     }
     const holders = [ZERO, DEAD, ...KNOWN_LOCKERS] as Address[];
-    let secured = 0n;
-    for (const holder of holders) {
-      secured += await balanceOf(ctx.client, lp, holder);
-    }
+    const balances = await Promise.all(holders.map((holder) => balanceOf(ctx.client, lp, holder)));
+    const secured = balances.reduce((sum, balance) => sum + balance, 0n);
     const pct = Number((secured * 10_000n) / supply) / 100;
     if (pct >= 95) return { score: 5, detail: `${pct.toFixed(1)}% of LP burned/locked` };
     if (pct >= 50) return { score: 35, detail: `${pct.toFixed(1)}% of LP burned/locked` };
@@ -195,7 +197,9 @@ export const limitsDetector = bytecodeDetector(
 export const taxesDetector: Detector = {
   name: "taxes",
   weight: 0.08,
-  fast: false,
+  // In the gate: a bytecode scan plus a couple of getter reads. Punitive taxes
+  // silently eat the whole position, so it belongs before the buy.
+  fast: true,
   async detect(ctx): Promise<Factor> {
     const found = hasAnySelector(ctx.bytecode, TAX_SIGNATURES);
     if (found.length === 0) {
@@ -225,7 +229,9 @@ export const taxesDetector: Detector = {
 export const honeypotDetector: Detector = {
   name: "honeypot-sell",
   weight: 0.2,
-  fast: false,
+  // In the gate: the highest-weighted detector. Buying a token you cannot sell
+  // is the worst outcome, so this must run before the buy — one balanceOf read.
+  fast: true,
   async detect(ctx): Promise<Factor> {
     // A faithful sell simulation needs a state override to grant the caller a
     // balance, and the token's balance storage slot — which varies per token.

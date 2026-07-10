@@ -10,6 +10,15 @@ export function tokenInFor(intent: TradeIntent, pool: Pool) {
   return intent.side === "buy" ? counterToken(pool, intent.token) : intent.token;
 }
 
+/**
+ * The token *received* by an intent: a buy receives `intent.token`; a sell
+ * receives the pool's other (quote) token. Used to find the fill amount in a
+ * swap receipt's Transfer logs.
+ */
+export function tokenOutFor(intent: TradeIntent, pool: Pool) {
+  return intent.side === "buy" ? intent.token : counterToken(pool, intent.token);
+}
+
 /** Quote the intent against its pool. Shared by both executors. */
 export async function quoteIntent(
   adapter: DexAdapter,

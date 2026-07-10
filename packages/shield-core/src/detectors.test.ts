@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DetectorContext, ShieldClient } from "./detector";
 import {
   concentrationDetector,
+  defaultDetectors,
   honeypotDetector,
   limitsDetector,
   liquidityDetector,
@@ -46,6 +47,25 @@ function ctx(overrides: Partial<DetectorContext> & { client: ShieldClient }): De
     ...overrides,
   };
 }
+
+describe("pre-trade gate composition", () => {
+  const gate = defaultDetectors().filter((detector) => detector.fast);
+  const gateNames = gate.map((detector) => detector.name);
+
+  it("includes the rug-defining detectors so the gate never buys blind", () => {
+    // These are the signals that separate a memecoin from a scam; a buy must
+    // not fire without them. Regression guard for the pre-trade gate.
+    expect(gateNames).toEqual(
+      expect.arrayContaining(["liquidity", "lp-security", "honeypot-sell", "taxes"]),
+    );
+  });
+
+  it("covers the overwhelming majority of the total risk weight", () => {
+    const total = defaultDetectors().reduce((sum, d) => sum + d.weight, 0);
+    const gateWeight = gate.reduce((sum, d) => sum + d.weight, 0);
+    expect(gateWeight / total).toBeGreaterThan(0.9);
+  });
+});
 
 describe("liquidity detector", () => {
   it("scores by reference-token reserve tier", async () => {
