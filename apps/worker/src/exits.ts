@@ -14,6 +14,14 @@ export interface ExitConfig {
   sellFractionBps: number;
   /** Max slippage tolerated on the exit sell, in bps. */
   maxSlippageBps: number;
+  /**
+   * When > 0, arm a *trailing* stop `trailingBps` below the high-water mark
+   * **instead of** the fixed stop-loss — it ratchets up as the price climbs, so
+   * it doubles as a stop and a gains-lock. 0 (default) keeps the fixed
+   * stop-loss. The two are mutually exclusive on purpose: running both would arm
+   * two competing sell triggers on the same position.
+   */
+  trailingBps: number;
 }
 
 export interface ExitArmerOptions {
@@ -46,10 +54,11 @@ export function entryPriceOf(trade: Trade): bigint | undefined {
 }
 
 /**
- * Build the take-profit and stop-loss rules that manage a freshly opened
- * position. Both read their entry price from the fill and sell against the same
- * book (`simulated`) and wallet as the entry, so the runner's position lookup
- * and the resulting sell intents line up.
+ * Build the two rules that manage a freshly opened position: a take-profit, and
+ * a downside stop that is either a fixed stop-loss or a trailing stop
+ * (`config.trailingBps > 0`). All sell against the same book (`simulated`) and
+ * wallet as the entry, so the runner's position lookup and the resulting sell
+ * intents line up.
  */
 export function buildExitRules(
   trade: Trade,
@@ -74,32 +83,48 @@ export function buildExitRules(
   };
 
   const tokenKey = trade.token.toLowerCase();
-  return [
-    {
-      ...base,
-      id: `tp:${tokenKey}`,
-      type: "take-profit",
-      params: {
-        kind: "take-profit",
-        entryPrice,
-        gainBps: config.gainBps,
-        sellFractionBps: config.sellFractionBps,
-        maxSlippageBps: config.maxSlippageBps,
-      },
+  const takeProfit: StrategyRule = {
+    ...base,
+    id: `tp:${tokenKey}`,
+    type: "take-profit",
+    params: {
+      kind: "take-profit",
+      entryPrice,
+      gainBps: config.gainBps,
+      sellFractionBps: config.sellFractionBps,
+      maxSlippageBps: config.maxSlippageBps,
     },
-    {
-      ...base,
-      id: `sl:${tokenKey}`,
-      type: "stop-loss",
-      params: {
-        kind: "stop-loss",
-        entryPrice,
-        lossBps: config.lossBps,
-        sellFractionBps: config.sellFractionBps,
-        maxSlippageBps: config.maxSlippageBps,
-      },
-    },
-  ];
+  };
+
+  // The downside stop: a trailing stop that ratchets up when configured,
+  // otherwise a fixed stop-loss anchored at the entry price.
+  const stop: StrategyRule =
+    config.trailingBps > 0
+      ? {
+          ...base,
+          id: `trail:${tokenKey}`,
+          type: "trailing-stop",
+          params: {
+            kind: "trailing-stop",
+            trailingBps: config.trailingBps,
+            sellFractionBps: config.sellFractionBps,
+            maxSlippageBps: config.maxSlippageBps,
+          },
+        }
+      : {
+          ...base,
+          id: `sl:${tokenKey}`,
+          type: "stop-loss",
+          params: {
+            kind: "stop-loss",
+            entryPrice,
+            lossBps: config.lossBps,
+            sellFractionBps: config.sellFractionBps,
+            maxSlippageBps: config.maxSlippageBps,
+          },
+        };
+
+  return [takeProfit, stop];
 }
 
 /**
@@ -138,15 +163,18 @@ export async function attachExitArmer(options: ExitArmerOptions): Promise<Unsubs
     for (const rule of rules) {
       await options.store.upsert(rule);
     }
+    const trailing = options.config.trailingBps > 0;
     logger.info(
       {
         token: trade.token,
         simulated: trade.simulated,
         entryPrice: (rules[0]?.params as { entryPrice: bigint }).entryPrice.toString(),
         gainBps: options.config.gainBps,
-        lossBps: options.config.lossBps,
+        stop: trailing
+          ? `trailing ${options.config.trailingBps}bps`
+          : `fixed ${options.config.lossBps}bps`,
       },
-      "armed take-profit + stop-loss",
+      trailing ? "armed take-profit + trailing-stop" : "armed take-profit + stop-loss",
     );
   };
 

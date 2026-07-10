@@ -17,7 +17,10 @@ const CONFIG: ExitConfig = {
   lossBps: 3_000,
   sellFractionBps: 10_000,
   maxSlippageBps: 500,
+  trailingBps: 0, // fixed stop-loss
 };
+
+const TRAILING_CONFIG: ExitConfig = { ...CONFIG, trailingBps: 2_000 };
 
 function pool(): Pool {
   return {
@@ -85,6 +88,21 @@ describe("buildExitRules", () => {
     });
   });
 
+  it("arms a trailing stop instead of the fixed stop-loss when trailingBps > 0", () => {
+    const rules = buildExitRules(fill(), pool(), "wallet-1", TRAILING_CONFIG, 1_000);
+    expect(rules).toHaveLength(2);
+
+    const [tp, stop] = rules;
+    expect(tp?.type).toBe("take-profit"); // TP unchanged
+    expect(stop).toMatchObject({
+      id: `trail:${MEME}`,
+      type: "trailing-stop",
+      params: { kind: "trailing-stop", trailingBps: 2_000, sellFractionBps: 10_000 },
+    });
+    // Mutually exclusive: no fixed stop-loss alongside the trailing one.
+    expect(rules.some((r) => r.type === "stop-loss")).toBe(false);
+  });
+
   it("arms nothing for an unpriceable fill", () => {
     expect(
       buildExitRules(fill({ amountOut: tokenAmount(0n, 18) }), pool(), "w", CONFIG, 0),
@@ -126,5 +144,23 @@ describe("attachExitArmer", () => {
     await bus.publish(executed(fill()));
     await bus.publish(executed(fill()));
     expect(await store.list()).toHaveLength(2);
+  });
+
+  it("arms TP + trailing-stop when configured for trailing", async () => {
+    const trailingBus = new InMemoryEventBus();
+    const trailingStore = new InMemoryStrategyStore();
+    const trailingRegistry = new PoolRegistry();
+    trailingRegistry.record(MEME, pool());
+    await attachExitArmer({
+      bus: trailingBus,
+      store: trailingStore,
+      registry: trailingRegistry,
+      walletId: "wallet-1",
+      config: TRAILING_CONFIG,
+    });
+
+    await trailingBus.publish(executed(fill()));
+    const rules = await trailingStore.list();
+    expect(rules.map((r) => r.type).sort()).toEqual(["take-profit", "trailing-stop"]);
   });
 });

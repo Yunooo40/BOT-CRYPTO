@@ -246,6 +246,9 @@ async function main(): Promise<void> {
     lossBps: intEnv("EXIT_SL_LOSS_BPS", 3_000), // −30%
     sellFractionBps: intEnv("EXIT_SELL_FRACTION_BPS", 10_000), // sell all
     maxSlippageBps: intEnv("EXIT_MAX_SLIPPAGE_BPS", maxSlippageBps),
+    // > 0 swaps the fixed stop-loss for a trailing stop that ratchets up with
+    // the price (e.g. 2000 = sell 20% below the high-water mark). 0 = fixed SL.
+    trailingBps: intEnv("EXIT_TRAILING_BPS", 0),
   };
 
   // --- Scanner: watches Base DEX factories, emits token.detected / pool.created ---
