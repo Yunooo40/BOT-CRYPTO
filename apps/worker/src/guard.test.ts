@@ -6,12 +6,7 @@ import {
   type Trade,
   type TradeIntent,
 } from "@bot/domain";
-import type {
-  ExecuteRequest,
-  Executor,
-  PositionRecord,
-  PositionStore,
-} from "@bot/engine-core";
+import type { ExecuteRequest, Executor, PositionRecord, PositionStore } from "@bot/engine-core";
 import { getAddress } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -95,7 +90,12 @@ describe("withNotionalCap", () => {
   });
 });
 
-function position(token: Address, amount: bigint, costBasis: bigint, simulated = false): PositionRecord {
+function position(
+  token: Address,
+  amount: bigint,
+  costBasis: bigint,
+  simulated = false,
+): PositionRecord {
   return {
     id: `pos-${token}`,
     chainId: CHAIN_ID,
@@ -122,7 +122,11 @@ describe("withPortfolioLimits", () => {
 
   it("passes a buy through when under the position cap", async () => {
     const inner = fakeExecutor();
-    const guarded = withPortfolioLimits(inner, fakeStore([position(otherToken(9), 5n, 100n)]), limits);
+    const guarded = withPortfolioLimits(
+      inner,
+      fakeStore([position(otherToken(9), 5n, 100n)]),
+      limits,
+    );
     await guarded.execute(request("buy", 100n));
     expect(inner.execute).toHaveBeenCalledOnce();
   });
@@ -140,7 +144,11 @@ describe("withPortfolioLimits", () => {
   it("still allows adding to a token already held at the cap (no new slot)", async () => {
     const inner = fakeExecutor();
     // Three open, but one of them IS the intent's token → not a new position.
-    const open = [position(TOKEN, 5n, 100n), position(otherToken(2), 5n, 100n), position(otherToken(3), 5n, 100n)];
+    const open = [
+      position(TOKEN, 5n, 100n),
+      position(otherToken(2), 5n, 100n),
+      position(otherToken(3), 5n, 100n),
+    ];
     const guarded = withPortfolioLimits(inner, fakeStore(open), limits);
     await guarded.execute(request("buy", 100n));
     expect(inner.execute).toHaveBeenCalledOnce();
@@ -181,7 +189,10 @@ describe("withPortfolioLimits", () => {
   it("skips the store entirely when both limits are disabled", async () => {
     const inner = fakeExecutor();
     const store = fakeStore([]);
-    const guarded = withPortfolioLimits(inner, store, { maxOpenPositions: 0, maxTotalNotionalWei: 0n });
+    const guarded = withPortfolioLimits(inner, store, {
+      maxOpenPositions: 0,
+      maxTotalNotionalWei: 0n,
+    });
     await guarded.execute(request("buy", 100n));
     expect(store.list).not.toHaveBeenCalled();
     expect(inner.execute).toHaveBeenCalledOnce();
